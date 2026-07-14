@@ -16,6 +16,9 @@ export interface SaveKnowledgeInput {
   procedure: string;
   cautions: string[];
   unresolved: string[];
+  relatedKnowledgeIds?: string[];
+  supersedesKnowledgeIds?: string[];
+  sourceReferences?: string[];
 }
 
 function validateInput(input: SaveKnowledgeInput): void {
@@ -26,6 +29,9 @@ function validateInput(input: SaveKnowledgeInput): void {
     verified: input.verified,
     cautions: input.cautions,
     unresolved: input.unresolved,
+    relatedKnowledgeIds: input.relatedKnowledgeIds ?? [],
+    supersedesKnowledgeIds: input.supersedesKnowledgeIds ?? [],
+    sourceReferences: input.sourceReferences ?? [],
   })) {
     if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
       throw new Error(`${name}は文字列配列で指定してください。`);
@@ -77,6 +83,9 @@ export class SaveKnowledgeTool implements vscode.LanguageModelTool<SaveKnowledge
       keywords: input.keywords.map((value) => value.trim()).filter(Boolean),
       createdAt: now.toISOString(),
       source: "VS Code Language Model Toolから登録",
+      relatedKnowledgeIds: input.relatedKnowledgeIds?.map((value) => value.trim()).filter(Boolean),
+      supersedesKnowledgeIds: input.supersedesKnowledgeIds?.map((value) => value.trim()).filter(Boolean),
+      sourceReferences: input.sourceReferences?.map((value) => value.trim()).filter(Boolean),
       content: {
         conclusion: input.conclusion.trim(),
         background: input.background.trim(),

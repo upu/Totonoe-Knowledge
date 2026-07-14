@@ -50,6 +50,14 @@ password=example-only-secret
 - [ ] 全角英数字と半角英数字を正規化する
 - [ ] 複数語の結果をQuick Pickから開ける
 
+## 整合性検査
+
+- [ ] 正常なEntryだけのリポジトリで問題なしと表示する
+- [ ] 必須front matterがないMarkdownをProblemsへ表示する
+- [ ] 重複IDを両方のファイルへ表示する
+- [ ] 存在しない `related` / `supersedes` を警告する
+- [ ] 自己参照をエラーとして表示する
+
 ## Language Model Tools
 
 - [ ] Agentモードで `#totonoeKnowledgeSave` を明示参照できる

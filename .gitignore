@@ -1,8 +1,9 @@
 node_modules/
 dist/
+.integration-test/
 *.vsix
 .DS_Store
 .vscode-test/
+.vscode-test-user-data/
 .totonoe/index.sqlite
 .totonoe/vectors/
-

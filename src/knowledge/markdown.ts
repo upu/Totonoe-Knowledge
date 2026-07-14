@@ -40,9 +40,12 @@ function quoteSource(source: string): string {
 }
 
 export function renderKnowledge(draft: KnowledgeDraft): string {
-  const keywords = draft.keywords.length
-    ? draft.keywords.map((keyword) => `  - ${yamlString(keyword)}`).join("\n")
-    : "  []";
+  const yamlList = (key: string, values: string[]): string => values.length
+    ? `${key}:\n${values.map((value) => `  - ${yamlString(value)}`).join("\n")}`
+    : `${key}: []`;
+  const sourceReferences = draft.sourceReferences?.length
+    ? `\n\n## 参照\n\n${draft.sourceReferences.map((value) => `- ${value}`).join("\n")}`
+    : "";
 
   return `---
 id: ${draft.id}
@@ -50,12 +53,11 @@ title: ${yamlString(draft.title)}
 summary: ${yamlString(draft.summary)}
 type: ${draft.type}
 status: active
-keywords:
-${keywords}
+${yamlList("keywords", draft.keywords)}
 created_at: ${draft.createdAt}
 updated_at: ${draft.createdAt}
-related: []
-supersedes: []
+${yamlList("related", draft.relatedKnowledgeIds ?? [])}
+${yamlList("supersedes", draft.supersedesKnowledgeIds ?? [])}
 ---
 
 # 結論
@@ -86,6 +88,6 @@ ${listOrPlaceholder(draft.content.unresolved, "未解決事項がなければ「
 
 <!-- 機密情報や認証情報が含まれていないか、保存前に確認してください。 -->
 
-${quoteSource(draft.source)}
+${quoteSource(draft.source)}${sourceReferences}
 `;
 }

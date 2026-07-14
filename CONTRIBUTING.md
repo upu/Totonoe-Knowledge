@@ -4,7 +4,7 @@
 
 1. 対応するIssueで目的と受け入れ条件を確認する
 2. 小さなブランチで変更する
-3. `npm run package` で型チェック、テスト、バンドルを実行する
+3. `npm run package` と `npm run test:integration` を実行する
 4. セキュリティ境界や外部送信先を変える変更は明記する
 5. Pull Requestでは変更理由、利用者への影響、確認方法を説明する
 
