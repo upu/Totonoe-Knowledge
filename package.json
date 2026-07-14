@@ -13,7 +13,8 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "SECURITY.md"
+    "SECURITY.md",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "publisher": "totonoe",
   "engines": {
@@ -48,6 +49,10 @@
       {
         "command": "totonoeKnowledge.validateRepository",
         "title": "Totonoe Knowledge: Validate Repository"
+      },
+      {
+        "command": "totonoeKnowledge.rebuildSearchIndex",
+        "title": "Totonoe Knowledge: Rebuild Search Index"
       }
     ],
     "languageModelTools": [
@@ -213,20 +218,25 @@
   },
   "scripts": {
     "check": "tsc --noEmit",
-    "compile": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap",
+    "copy:sqlite-wasm": "node -e \"const fs=require('node:fs'); const path=require('node:path'); const source=path.dirname(require.resolve('sql.js/dist/sql-wasm.js')); fs.mkdirSync('dist',{recursive:true}); for(const file of ['sql-wasm.js','sql-wasm.wasm']) fs.copyFileSync(path.join(source,file),path.join('dist',file))\"",
+    "compile": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap && npm run copy:sqlite-wasm",
     "compile:integration": "esbuild ./integration/runTest.ts ./integration/suite/index.ts --bundle --platform=node --format=cjs --external:vscode --external:@vscode/test-electron --outbase=./integration --outdir=./.integration-test --sourcemap",
     "compile:all": "npm run compile && npm run compile:integration",
-    "watch": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap --watch",
+    "watch": "npm run copy:sqlite-wasm && esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap --watch",
     "test": "tsx --test src/**/*.test.ts",
     "test:integration": "npm run compile:all && node ./.integration-test/runTest.js",
     "package": "npm run check && npm test && npm run compile"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/sql.js": "^1.4.10",
     "@types/vscode": "^1.95.0",
     "@vscode/test-electron": "^3.0.0",
     "esbuild": "^0.28.1",
     "tsx": "^4.20.0",
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "sql.js": "1.13.0"
   }
 }

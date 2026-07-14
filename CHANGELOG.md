@@ -12,3 +12,6 @@
 - Add repository validation for metadata, duplicate IDs, and broken relationships
 - Add optional related, supersedes, and source-reference metadata to the Save Tool
 - Add 14-day GitHub Actions VSIX artifacts for pre-alpha dogfooding
+- Add a rebuildable SQLite FTS index with incremental Markdown synchronization
+- Preserve Japanese and substring search through derived n-gram tokens and weighted reranking
+- Fall back to direct Markdown search when the disposable index is unavailable
