@@ -27,6 +27,18 @@ function yamlString(value: string): string {
   return JSON.stringify(value);
 }
 
+function textOrPlaceholder(value: string, placeholder: string): string {
+  return value.trim() || placeholder;
+}
+
+function listOrPlaceholder(values: string[], placeholder: string): string {
+  return values.length ? values.map((value) => `- ${value}`).join("\n") : `- ${placeholder}`;
+}
+
+function quoteSource(source: string): string {
+  return source.split(/\r?\n/).map((line) => `> ${line}`).join("\n");
+}
+
 export function renderKnowledge(draft: KnowledgeDraft): string {
   const keywords = draft.keywords.length
     ? draft.keywords.map((keyword) => `  - ${yamlString(keyword)}`).join("\n")
@@ -48,33 +60,32 @@ supersedes: []
 
 # 結論
 
-${draft.summary || "ここに結論を記入してください。"}
+${textOrPlaceholder(draft.content.conclusion || draft.summary, "ここに結論を記入してください。")}
 
 # 背景
 
-このナレッジを作成した背景を記入してください。
+${textOrPlaceholder(draft.content.background, "このナレッジを作成した背景を記入してください。")}
 
 # 確認したこと
 
-- 確認事項を記入してください。
+${listOrPlaceholder(draft.content.verified, "確認事項を記入してください。")}
 
 # 対応方法
 
-必要な手順や実装内容を記入してください。
+${textOrPlaceholder(draft.content.procedure, "必要な手順や実装内容を記入してください。")}
 
 # 注意点
 
-- 適用範囲、前提条件、既知の制約を記入してください。
+${listOrPlaceholder(draft.content.cautions, "適用範囲、前提条件、既知の制約を記入してください。")}
 
 # 未解決事項
 
-- 未解決事項がなければ「なし」と記入してください。
+${listOrPlaceholder(draft.content.unresolved, "未解決事項がなければ「なし」と記入してください。")}
 
 # 元情報
 
 <!-- 機密情報や認証情報が含まれていないか、保存前に確認してください。 -->
 
-${draft.source}
+${quoteSource(draft.source)}
 `;
 }
-

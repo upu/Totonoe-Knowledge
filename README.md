@@ -2,7 +2,7 @@
 
 調査・判断・試行錯誤の結果を、後から検索・再利用・統合できるMarkdownナレッジへ整えるVS Code拡張です。
 
-> Status: pre-alpha / v0.1開発中
+> Status: pre-alpha / v0.1 dogfooding前
 
 ## なぜ作るのか
 
@@ -10,13 +10,13 @@
 
 設計の基本方針は次のとおりです。
 
-- Markdownを正本とし、DBは将来追加する再生成可能な検索インデックスにする
+- Markdownを正本とし、DBは再生成可能な検索インデックスにする
 - AI生成結果は保存前に人が確認する
 - 変更履歴を上書きせず、`supersedes` と適用範囲で関係を表す
-- 社外秘用途を想定し、保存先とLLMへの送信先を分けて管理する
+- 機能のソースコードと、利用者が扱う機密ナレッジを分離する
 - AIなしでも登録・検索できる状態を維持する
 
-## 現在できること
+## 機能
 
 コマンドパレットから次のコマンドを実行できます。
 
@@ -24,9 +24,29 @@
 - `Totonoe Knowledge: Register Selection`
 - `Totonoe Knowledge: Search`
 
-登録コマンドはタイトル、超要約、種別、キーワードを入力し、固定構造のMarkdown案を開きます。内容と機密情報の有無を確認・編集してから、ワークスペースの `knowledge/` に保存できます。
+登録時は次の生成方法を選択できます。
 
-検索コマンドは保存済みMarkdownを走査し、タイトル、要約、本文の一致を重み付けして一覧表示します。
+- `Language Modelで整える`: VS Codeで利用可能なモデルを選び、構造化されたナレッジ案を生成
+- `テンプレートで作る`: 外部送信せず、ローカルで編集可能なひな形を生成
+
+生成後にタイトル、超要約、種別、キーワードを確認し、Markdown本文を自由に編集してから保存します。Language Modelの構造化出力は実行時に検証され、失敗した場合はテンプレートへ安全に切り替えられます。
+
+検索はタイトル、要約、キーワード、本文を異なる重みで評価し、日本語・英数字・複数語を含む検索結果をQuick Pickへ表示します。
+
+Agentモードからは、次のLanguage Model Toolを明示的に参照できます。
+
+- `#totonoeKnowledgeSave`: 会話で整理した内容を、確認付きでMarkdownへ保存
+- `#totonoeKnowledgeSearch`: 過去の仕様、調査、手順、既知問題を検索
+
+Save Toolはファイル作成前にVS Codeの確認を要求します。Search Toolが返すMarkdownナレッジは未検証の資料として扱い、状態・適用範囲・根拠を確認するようモデルへ通知します。
+
+## セキュリティ境界
+
+このGitHubリポジトリは機能のソースコードを公開する場所です。実際の社外秘ナレッジは、この公開リポジトリへ保存しないでください。社内Git、privateリポジトリ、またはアクセス制御されたローカルワークスペースを別に用意してください。
+
+テンプレート生成は外部通信を行いません。Language Model生成を選ぶと、登録元テキストがユーザーの選択したVS Code Language Model Providerへ送信されます。送信前と保存前に秘密情報らしい文字列を検査して警告しますが、検出には誤りや見逃しがあります。
+
+詳細は [SECURITY.md](SECURITY.md) を参照してください。
 
 ## 開発環境
 
@@ -38,15 +58,24 @@
 
 ```bash
 npm install
-npm run check
-npm run compile
+npm run package
 ```
 
-VS Codeでこのフォルダーを開き、`F5` を押すとExtension Development Hostで実行できます。
+`npm run package` は型チェック、11件以上のユニットテスト、Extension Host向けバンドルを実行します。Pull Requestと`main`へのpushでも同じ処理をGitHub Actionsで実行します。
+
+VS Codeでこのフォルダーを開き、`F5`を押すとExtension Development Hostで実行できます。
+
+## 設定
+
+| 設定 | 既定値 | 説明 |
+|---|---:|---|
+| `totonoeKnowledge.repositoryPath` | `knowledge` | ワークスペース内のMarkdown保存先 |
+| `totonoeKnowledge.generator` | `ask` | `ask` / `template` / `languageModel` |
+| `totonoeKnowledge.secretScanning.enabled` | `true` | 外部送信前と保存前の秘密情報候補検査 |
+
+保存先にはワークスペース内の相対パスだけを指定できます。
 
 ## 保存形式
-
-既定では次のように保存します。
 
 ```text
 knowledge/
@@ -58,23 +87,31 @@ knowledge/
 └─ decisions/
 ```
 
-保存先は `totonoeKnowledge.repositoryPath` で変更できます。Markdownのfront matterにはID、タイトル、要約、種別、状態、キーワード、日時、関連・置き換え関係を保持します。
+Markdownのfront matterにはID、タイトル、要約、種別、状態、キーワード、日時、関連・置き換え関係を保持します。元情報は引用として残し、生成内容の根拠まで戻れるようにします。
 
-## セキュリティと社外秘情報
+## v0.1の状態
 
-現バージョンは入力内容を外部サービスへ送信しません。クリップボードや選択範囲の内容はローカルでMarkdownに整形され、指定ワークスペースへ保存されます。
+実装済み:
 
-ただし、元情報に認証情報や顧客情報が含まれていないかは保存前に必ず確認してください。将来LLM連携を追加する際も、利用するProviderと送信先を明示し、ローカル／社内LLM／AIなしを選択可能にする方針です。詳細は [SECURITY.md](SECURITY.md) を参照してください。
+- 拡張機能の初期構成
+- クリップボード／選択範囲からの登録
+- AIなしテンプレートと交換可能なGenerator境界
+- VS Code Language Modelによる構造化生成
+- 外部送信前／保存前の秘密情報候補警告
+- 重み付きMarkdown全文検索
+- ユニットテストとGitHub Actions
+- Agent向けSave/Search Language Model Tool
 
-## ロードマップ
+残っている完成条件は、機密データを公開リポジトリから分離した環境で10〜30件を実際に登録し、操作性と検索品質を評価するdogfoodingです。手順は [docs/DOGFOODING.md](docs/DOGFOODING.md) にあります。
 
-開発順序と完成条件は [docs/ROADMAP.md](docs/ROADMAP.md) にまとめています。まずv0.1で「登録→確認→Markdown保存→検索」を実用化し、その後にCopilot Tool連携、意味検索、累積仕様、チーム共有へ進みます。
+コマンドとLanguage Model Toolの手動確認項目は [docs/MANUAL_TEST.md](docs/MANUAL_TEST.md) にあります。
+
+全体計画は [docs/ROADMAP.md](docs/ROADMAP.md) を参照してください。
 
 ## コントリビューション
 
-現在は設計とMVPの検証段階です。Issueで目的・受け入れ条件を確認してから変更を始めてください。運用ルールは [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
+[CONTRIBUTING.md](CONTRIBUTING.md) と対象Issueの受け入れ条件を確認してください。外部通信や機密情報の境界を変えるPull Requestでは、その影響を明記してください。
 
 ## ライセンス
 
-現時点ではprivateリポジトリとしての社内・個人利用を想定しており、ライセンスは未設定です。
-
+[MIT License](LICENSE)
