@@ -1,0 +1,52 @@
+{
+  "name": "totonoe-knowledge",
+  "displayName": "Totonoe Knowledge",
+  "description": "調査や会話を、検索・再利用できるMarkdownナレッジへ整えるVS Code拡張",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "totonoe",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": ["Other", "Machine Learning"],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "totonoeKnowledge.registerFromClipboard",
+        "title": "Totonoe Knowledge: Register from Clipboard"
+      },
+      {
+        "command": "totonoeKnowledge.registerSelection",
+        "title": "Totonoe Knowledge: Register Selection"
+      },
+      {
+        "command": "totonoeKnowledge.search",
+        "title": "Totonoe Knowledge: Search"
+      }
+    ],
+    "configuration": {
+      "title": "Totonoe Knowledge",
+      "properties": {
+        "totonoeKnowledge.repositoryPath": {
+          "type": "string",
+          "default": "knowledge",
+          "description": "ワークスペースからの相対パスで指定するMarkdownナレッジ保存先"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "compile": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap",
+    "watch": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap --watch",
+    "package": "npm run check && npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.95.0",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.7.2"
+  }
+}

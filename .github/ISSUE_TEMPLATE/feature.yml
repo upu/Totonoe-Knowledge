@@ -1,0 +1,30 @@
+name: Feature request
+description: Totonoe Knowledgeの機能提案
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 解決したい問題
+      description: 機能ではなく、まず利用者が困っていることを記述してください。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提案
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ条件
+      placeholder: "- [ ] ..."
+  - type: checkboxes
+    id: security
+    attributes:
+      label: セキュリティ確認
+      options:
+        - label: 外部通信・機密情報・認証情報への影響を記載した
+

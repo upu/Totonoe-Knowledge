@@ -1,0 +1,27 @@
+name: Bug report
+description: 再現可能な不具合の報告
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: 発生したこと
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+    validations:
+      required: true
+  - type: input
+    id: vscode
+    attributes:
+      label: VS Codeバージョン
+  - type: textarea
+    id: notes
+    attributes:
+      label: 補足
+      description: 秘密情報や実運用の認証情報は記載しないでください。
+
