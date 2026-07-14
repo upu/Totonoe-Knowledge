@@ -11,6 +11,12 @@ export async function saveKnowledgeDraft(
   const targetDirectory = vscode.Uri.joinPath(root, repositoryPath, directoryFor(draft.type));
   const target = vscode.Uri.joinPath(targetDirectory, `${draft.id}-${slugify(draft.title)}.md`);
   await vscode.workspace.fs.createDirectory(targetDirectory);
+  try {
+    await vscode.workspace.fs.stat(target);
+    throw new Error(`同じIDのナレッジファイルがすでに存在します: ${draft.id}`);
+  } catch (error) {
+    if (!(error instanceof vscode.FileSystemError) || error.code !== "FileNotFound") throw error;
+  }
   await vscode.workspace.fs.writeFile(target, Buffer.from(markdown, "utf8"));
   return target;
 }

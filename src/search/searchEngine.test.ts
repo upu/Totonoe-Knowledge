@@ -10,6 +10,7 @@ title: "SSHログが80文字で折り返される原因"
 summary: "PTYの端末幅をsttyで変更する"
 id: K-001
 type: investigation
+status: active
 keywords:
   - "SSH"
   - "PTY"
@@ -25,6 +26,7 @@ title: "アプリケーションログの収集手順"
 summary: "障害調査用のログを収集する"
 id: K-002
 type: procedure
+status: active
 keywords:
   - "logging"
 ---
@@ -38,6 +40,7 @@ test("parses quoted frontmatter and keyword lists", () => {
   assert.equal(parsed.title, "SSHログが80文字で折り返される原因");
   assert.equal(parsed.id, "K-001");
   assert.equal(parsed.type, "investigation");
+  assert.equal(parsed.status, "active");
   assert.equal(parsed.summary, "PTYの端末幅をsttyで変更する");
   assert.deepEqual(parsed.keywords, ["SSH", "PTY", "stty"]);
   assert.match(parsed.body, /COLUMNS/);

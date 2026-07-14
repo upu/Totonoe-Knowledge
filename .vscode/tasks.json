@@ -8,7 +8,12 @@
       "isBackground": true,
       "presentation": { "reveal": "never" },
       "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "type": "npm",
+      "script": "compile:all",
+      "problemMatcher": [],
+      "group": "test"
     }
   ]
 }
-

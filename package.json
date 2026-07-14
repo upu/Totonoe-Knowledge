@@ -19,7 +19,16 @@
   "engines": {
     "vscode": "^1.95.0"
   },
-  "categories": ["Other", "Machine Learning"],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "ナレッジの読み書きとLanguage Model Toolを使用するため、信頼済みワークスペースでのみ有効化します。"
+    }
+  },
+  "categories": [
+    "Other",
+    "Machine Learning"
+  ],
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
@@ -35,6 +44,10 @@
       {
         "command": "totonoeKnowledge.search",
         "title": "Totonoe Knowledge: Search"
+      },
+      {
+        "command": "totonoeKnowledge.validateRepository",
+        "title": "Totonoe Knowledge: Validate Repository"
       }
     ],
     "languageModelTools": [
@@ -49,23 +62,91 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "title": { "type": "string", "description": "Specific title that identifies the knowledge later" },
-            "summary": { "type": "string", "description": "One-sentence conclusion" },
+            "title": {
+              "type": "string",
+              "description": "Specific title that identifies the knowledge later"
+            },
+            "summary": {
+              "type": "string",
+              "description": "One-sentence conclusion"
+            },
             "type": {
               "type": "string",
-              "enum": ["investigation", "troubleshooting", "specification", "change", "procedure", "decision"]
+              "enum": [
+                "investigation",
+                "troubleshooting",
+                "specification",
+                "change",
+                "procedure",
+                "decision"
+              ]
             },
-            "keywords": { "type": "array", "items": { "type": "string" } },
-            "conclusion": { "type": "string" },
-            "background": { "type": "string" },
-            "verified": { "type": "array", "items": { "type": "string" } },
-            "procedure": { "type": "string" },
-            "cautions": { "type": "array", "items": { "type": "string" } },
-            "unresolved": { "type": "array", "items": { "type": "string" } }
+            "keywords": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "conclusion": {
+              "type": "string"
+            },
+            "background": {
+              "type": "string"
+            },
+            "verified": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "procedure": {
+              "type": "string"
+            },
+            "cautions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "unresolved": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "relatedKnowledgeIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Existing related knowledge IDs; omit rather than guess"
+            },
+            "supersedesKnowledgeIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Older knowledge IDs explicitly replaced by this entry; omit rather than guess"
+            },
+            "sourceReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Relevant files, issues, commits, or document references"
+            }
           },
           "required": [
-            "title", "summary", "type", "keywords", "conclusion", "background",
-            "verified", "procedure", "cautions", "unresolved"
+            "title",
+            "summary",
+            "type",
+            "keywords",
+            "conclusion",
+            "background",
+            "verified",
+            "procedure",
+            "cautions",
+            "unresolved"
           ],
           "additionalProperties": false
         }
@@ -81,10 +162,20 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "query": { "type": "string", "description": "Search terms derived from the user's question" },
-            "limit": { "type": "number", "minimum": 1, "maximum": 10, "default": 5 }
+            "query": {
+              "type": "string",
+              "description": "Search terms derived from the user's question"
+            },
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 5
+            }
           },
-          "required": ["query"],
+          "required": [
+            "query"
+          ],
           "additionalProperties": false
         }
       }
@@ -99,7 +190,11 @@
         },
         "totonoeKnowledge.generator": {
           "type": "string",
-          "enum": ["ask", "template", "languageModel"],
+          "enum": [
+            "ask",
+            "template",
+            "languageModel"
+          ],
           "enumDescriptions": [
             "登録時にテンプレートまたはLanguage Modelを選択する",
             "外部送信せず固定テンプレートを使用する",
@@ -119,13 +214,17 @@
   "scripts": {
     "check": "tsc --noEmit",
     "compile": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap",
+    "compile:integration": "esbuild ./integration/runTest.ts ./integration/suite/index.ts --bundle --platform=node --format=cjs --external:vscode --external:@vscode/test-electron --outbase=./integration --outdir=./.integration-test --sourcemap",
+    "compile:all": "npm run compile && npm run compile:integration",
     "watch": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap --watch",
     "test": "tsx --test src/**/*.test.ts",
+    "test:integration": "npm run compile:all && node ./.integration-test/runTest.js",
     "package": "npm run check && npm test && npm run compile"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/vscode": "^1.95.0",
+    "@vscode/test-electron": "^3.0.0",
     "esbuild": "^0.28.1",
     "tsx": "^4.20.0",
     "typescript": "^5.7.2"

@@ -11,6 +11,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,3 +24,5 @@ jobs:
         run: npm ci
       - name: Typecheck, test, and bundle
         run: npm run package
+      - name: Extension Host integration test
+        run: xvfb-run -a npm run test:integration

@@ -11,6 +11,7 @@ interface ToolContribution {
 
 test("contributes explicit save and search language model tools", async () => {
   const manifest = JSON.parse(await readFile("package.json", "utf8")) as {
+    capabilities?: { untrustedWorkspaces?: { supported?: boolean } };
     contributes?: { languageModelTools?: ToolContribution[] };
   };
   const tools = manifest.contributes?.languageModelTools ?? [];
@@ -23,4 +24,5 @@ test("contributes explicit save and search language model tools", async () => {
   assert.equal(search?.toolReferenceName, "totonoeKnowledgeSearch");
   assert.equal(search?.canBeReferencedInPrompt, true);
   assert.ok(search?.inputSchema?.required?.includes("query"));
+  assert.equal(manifest.capabilities?.untrustedWorkspaces?.supported, false);
 });

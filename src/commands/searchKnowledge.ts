@@ -36,7 +36,7 @@ export async function searchKnowledge(): Promise<void> {
   const items: SearchItem[] = searchKnowledgeDocuments(documents, query.trim()).map((result) => ({
     label: result.title,
     description: result.summary,
-    detail: `${result.path} · score ${result.score}`,
+    detail: `${result.type} · ${result.status} · score ${result.score} · ${result.path}`,
     uri: documents.find((document) => document.path === result.path)!.uri,
     score: result.score,
   }));
