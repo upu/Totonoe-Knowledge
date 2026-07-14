@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { searchKnowledgeDocuments } from "../search/searchEngine";
+import { isValidRepositoryPath } from "../knowledge/repositoryPath";
+import { searchWorkspaceKnowledge } from "../search/workspaceSearch";
 
 interface SearchItem extends vscode.QuickPickItem {
   uri: vscode.Uri;
@@ -22,22 +23,28 @@ export async function searchKnowledge(): Promise<void> {
 
   const repositoryPath = vscode.workspace
     .getConfiguration("totonoeKnowledge")
-    .get<string>("repositoryPath", "knowledge");
-  const files = await vscode.workspace.findFiles(
-    new vscode.RelativePattern(root, `${repositoryPath}/**/*.md`),
-  );
-
-  const documents: Array<{ path: string; content: string; uri: vscode.Uri }> = [];
-  for (const uri of files) {
-    const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString("utf8");
-    documents.push({ path: vscode.workspace.asRelativePath(uri), content, uri });
+    .get<string>("repositoryPath", "knowledge")
+    .trim();
+  if (!isValidRepositoryPath(repositoryPath)) {
+    void vscode.window.showErrorMessage("repositoryPathにはワークスペース内の相対パスを指定してください。");
+    return;
   }
 
-  const items: SearchItem[] = searchKnowledgeDocuments(documents, query.trim()).map((result) => ({
+  const search = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Window, title: "Totonoe Knowledgeを検索中" },
+    () => searchWorkspaceKnowledge(root, repositoryPath, query.trim()),
+  );
+  if (search.indexError) {
+    void vscode.window.showWarningMessage(
+      `SQLite検索インデックスを利用できないため直接検索しました: ${search.indexError?.message ?? "不明なエラー"}`,
+    );
+  }
+
+  const items: SearchItem[] = search.results.map((result) => ({
     label: result.title,
     description: result.summary,
     detail: `${result.type} · ${result.status} · score ${result.score} · ${result.path}`,
-    uri: documents.find((document) => document.path === result.path)!.uri,
+    uri: vscode.Uri.joinPath(root, ...result.path.split("/")),
     score: result.score,
   }));
   const selected = await vscode.window.showQuickPick(items, {

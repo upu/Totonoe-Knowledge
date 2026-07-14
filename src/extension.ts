@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { rebuildSearchIndex } from "./commands/rebuildSearchIndex";
 import { registerKnowledge } from "./commands/registerKnowledge";
 import { searchKnowledge } from "./commands/searchKnowledge";
 import { validateKnowledgeRepository } from "./commands/validateKnowledge";
@@ -16,6 +17,7 @@ export function activate(context: vscode.ExtensionContext): void {
       registerKnowledge("selection"),
     ),
     vscode.commands.registerCommand("totonoeKnowledge.search", searchKnowledge),
+    vscode.commands.registerCommand("totonoeKnowledge.rebuildSearchIndex", rebuildSearchIndex),
     vscode.commands.registerCommand("totonoeKnowledge.validateRepository", () =>
       validateKnowledgeRepository(diagnostics),
     ),
