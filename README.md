@@ -70,6 +70,12 @@ npm run package
 
 VS Codeでこのフォルダーを開き、`F5`を押すとExtension Development Hostで実行できます。
 
+### ActionsのVSIXを試す
+
+Marketplace公開前のdogfoodingでは、GitHub Actionsの成功したrunから `totonoe-knowledge-vsix-<commit SHA>` artifactを取得できます。zipを展開し、VS CodeのExtensionsビューにある `Install from VSIX...` からインストールしてください。
+
+artifactは14日間保存されるpre-alphaビルドです。機密ナレッジを扱う前に、対象commitと [SECURITY.md](SECURITY.md) を確認してください。MarketplaceやGitHub Releaseへの自動公開は行いません。
+
 ## 設定
 
 | 設定 | 既定値 | 説明 |
