@@ -15,3 +15,4 @@
 - Add a rebuildable SQLite FTS index with incremental Markdown synchronization
 - Preserve Japanese and substring search through derived n-gram tokens and weighted reranking
 - Fall back to direct Markdown search when the disposable index is unavailable
+- Retry only transient VS Code test-runtime downloads while preserving Extension Host test failures
