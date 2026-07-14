@@ -11,10 +11,22 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     diagnostics,
     vscode.commands.registerCommand("totonoeKnowledge.registerFromClipboard", () =>
-      registerKnowledge("clipboard"),
+      registerKnowledge("clipboard", context),
     ),
     vscode.commands.registerCommand("totonoeKnowledge.registerSelection", () =>
-      registerKnowledge("selection"),
+      registerKnowledge("selection", context),
+    ),
+    vscode.commands.registerCommand("totonoeKnowledge.registerFromClipboardWithAi", () =>
+      registerKnowledge("clipboard", context, "languageModel"),
+    ),
+    vscode.commands.registerCommand("totonoeKnowledge.registerFromClipboardWithTemplate", () =>
+      registerKnowledge("clipboard", context, "template"),
+    ),
+    vscode.commands.registerCommand("totonoeKnowledge.registerSelectionWithAi", () =>
+      registerKnowledge("selection", context, "languageModel"),
+    ),
+    vscode.commands.registerCommand("totonoeKnowledge.registerSelectionWithTemplate", () =>
+      registerKnowledge("selection", context, "template"),
     ),
     vscode.commands.registerCommand("totonoeKnowledge.search", searchKnowledge),
     vscode.commands.registerCommand("totonoeKnowledge.rebuildSearchIndex", rebuildSearchIndex),
