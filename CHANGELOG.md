@@ -11,3 +11,4 @@
 - Add Extension Host integration tests without consuming a Language Model Provider
 - Add repository validation for metadata, duplicate IDs, and broken relationships
 - Add optional related, supersedes, and source-reference metadata to the Save Tool
+- Add 14-day GitHub Actions VSIX artifacts for pre-alpha dogfooding

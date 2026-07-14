@@ -16,9 +16,9 @@
 
 ## 実行手順
 
-1. このリポジトリで `npm install` と `npm run package` を実行する
-2. `F5`でExtension Development Hostを起動する
-3. Host側で、上記のprivate／社内ワークスペースを開く
+1. GitHub Actionsの成功したrunから `totonoe-knowledge-vsix-<commit SHA>` artifactを取得する（またはこのリポジトリで `F5`を使用する）
+2. artifactのzipを展開し、VS Codeの `Install from VSIX...` でインストールする
+3. 上記のprivate／社内ワークスペースを開く
 4. 調査を終えるたびにCopy Allまたは選択範囲から登録する
 5. 別の日に、元の言い回しとは異なる検索語で探す
 

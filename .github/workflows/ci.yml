@@ -26,3 +26,12 @@ jobs:
         run: npm run package
       - name: Extension Host integration test
         run: xvfb-run -a npm run test:integration
+      - name: Package dogfooding VSIX
+        run: npx --yes @vscode/vsce@3.9.2 package --no-dependencies --out "Totonoe-Knowledge-${{ github.sha }}.vsix"
+      - name: Upload dogfooding VSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: totonoe-knowledge-vsix-${{ github.sha }}
+          path: Totonoe-Knowledge-${{ github.sha }}.vsix
+          if-no-files-found: error
+          retention-days: 14
