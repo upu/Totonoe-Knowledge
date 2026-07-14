@@ -14,9 +14,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -29,7 +29,7 @@ jobs:
       - name: Package dogfooding VSIX
         run: npx --yes @vscode/vsce@3.9.2 package --no-dependencies --out "Totonoe-Knowledge-${{ github.sha }}.vsix"
       - name: Upload dogfooding VSIX
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: totonoe-knowledge-vsix-${{ github.sha }}
           path: Totonoe-Knowledge-${{ github.sha }}.vsix
