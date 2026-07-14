@@ -67,7 +67,7 @@ npm install
 npm run package
 ```
 
-`npm run package` は型チェック、29件以上のユニットテスト、Extension Host向けバンドルを実行します。`npm run test:integration` はVS Code Stableを起動し、activate・コマンド・Tool・Problems診断・SQLiteインデックス再構築を確認します。Pull Requestと`main`へのpushでも両方をGitHub Actionsで実行します。
+`npm run package` は型チェック、30件以上のユニットテスト、Extension Host向けバンドルを実行します。`npm run test:integration` はVS Code Stableを起動し、activate・コマンド・Tool・Problems診断・SQLiteインデックス再構築を確認します。VS Codeテスト環境の取得だけは一時的な通信失敗に備えて最大3回再試行し、起動後のテスト失敗は再試行しません。Pull Requestと`main`へのpushでも両方をGitHub Actionsで実行します。
 
 VS Codeでこのフォルダーを開き、`F5`を押すとExtension Development Hostで実行できます。
 
