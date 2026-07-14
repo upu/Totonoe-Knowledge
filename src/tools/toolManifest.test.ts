@@ -12,7 +12,10 @@ interface ToolContribution {
 test("contributes explicit save and search language model tools", async () => {
   const manifest = JSON.parse(await readFile("package.json", "utf8")) as {
     capabilities?: { untrustedWorkspaces?: { supported?: boolean } };
-    contributes?: { languageModelTools?: ToolContribution[] };
+    contributes?: {
+      commands?: Array<{ command: string }>;
+      languageModelTools?: ToolContribution[];
+    };
   };
   const tools = manifest.contributes?.languageModelTools ?? [];
   const save = tools.find((tool) => tool.name === "totonoe-knowledge_saveKnowledge");
@@ -25,4 +28,14 @@ test("contributes explicit save and search language model tools", async () => {
   assert.equal(search?.canBeReferencedInPrompt, true);
   assert.ok(search?.inputSchema?.required?.includes("query"));
   assert.equal(manifest.capabilities?.untrustedWorkspaces?.supported, false);
+
+  const commands = new Set(manifest.contributes?.commands?.map((command) => command.command));
+  for (const command of [
+    "totonoeKnowledge.registerFromClipboardWithAi",
+    "totonoeKnowledge.registerFromClipboardWithTemplate",
+    "totonoeKnowledge.registerSelectionWithAi",
+    "totonoeKnowledge.registerSelectionWithTemplate",
+  ]) {
+    assert.ok(commands.has(command), `direct registration command should be contributed: ${command}`);
+  }
 });

@@ -16,3 +16,6 @@
 - Preserve Japanese and substring search through derived n-gram tokens and weighted reranking
 - Fall back to direct Markdown search when the disposable index is unavailable
 - Retry only transient VS Code test-runtime downloads while preserving Extension Host test failures
+- Add direct AI/template registration commands with clearer user-facing descriptions
+- Reuse the previously selected AI model and remove redundant AI metadata prompts
+- Preselect the type/ID/title-derived local save path so a reviewed draft saves with `Ctrl+S`

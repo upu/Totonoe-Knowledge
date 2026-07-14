@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
 import type { KnowledgeGenerator } from "../ai/knowledgeGenerator";
+import { orderModelsByPreviousSelection } from "../ai/modelSelection";
 import { TemplateOnlyGenerator } from "../ai/templateOnlyGenerator";
 import { VsCodeLanguageModelGenerator } from "../ai/vsCodeLanguageModelGenerator";
 import { renderKnowledge } from "../knowledge/markdown";
 import { createKnowledgeId } from "../knowledge/id";
-import { saveKnowledgeDraft } from "../knowledge/repository";
+import { prepareKnowledgeTarget, saveKnowledgeDraft } from "../knowledge/repository";
 import { isValidRepositoryPath } from "../knowledge/repositoryPath";
 import {
   knowledgeTypes,
@@ -21,6 +22,14 @@ import {
 
 type SourceKind = KnowledgeSource["kind"];
 type GeneratorMode = "ask" | "template" | "languageModel";
+type SelectedGeneratorMode = Exclude<GeneratorMode, "ask">;
+
+interface GenerationResult {
+  generated: GeneratedKnowledge;
+  mode: SelectedGeneratorMode;
+}
+
+const previousModelStorageKey = "totonoeKnowledge.previousLanguageModelId";
 
 async function getSource(kind: SourceKind): Promise<KnowledgeSource | undefined> {
   if (kind === "clipboard") {
@@ -45,17 +54,17 @@ function workspaceRoot(): vscode.Uri | undefined {
   return vscode.workspace.workspaceFolders?.[0]?.uri;
 }
 
-async function chooseGeneratorMode(configured: GeneratorMode): Promise<Exclude<GeneratorMode, "ask"> | undefined> {
+async function chooseGeneratorMode(configured: GeneratorMode): Promise<SelectedGeneratorMode | undefined> {
   if (configured !== "ask") return configured;
   const selected = await vscode.window.showQuickPick([
     {
-      label: "$(sparkle) Language Modelで整える",
-      description: "次の画面で選択したVS Codeモデルへ入力を送信",
+      label: "$(sparkle) AIでナレッジ案を作る",
+      description: "コピー内容を次の画面で選ぶAIモデルへ送り、要約・分類・本文を生成",
       mode: "languageModel" as const,
     },
     {
-      label: "$(file-text) テンプレートで作る",
-      description: "外部送信せず、ローカルで編集可能なひな形を作成",
+      label: "$(file-text) 入力用テンプレートを作る",
+      description: "AIへ送信せず、要約を行わない入力用のひな形を作成",
       mode: "template" as const,
     },
   ], {
@@ -74,7 +83,7 @@ async function confirmExternalSend(source: KnowledgeSource): Promise<"send" | "t
   const findings = scanForSecrets(source.text);
   if (!findings.length) return "send";
   const choice = await vscode.window.showWarningMessage(
-    `入力に秘密情報らしい文字列があります（${summarizeSecretFindings(findings)}）。検出箇所: ${describeSecretFindingLocations(source.text, findings)}。選択したLanguage Modelへ送信しますか？検出には誤りや見逃しがあります。`,
+    `入力に秘密情報らしい文字列があります（${summarizeSecretFindings(findings)}）。検出箇所: ${describeSecretFindingLocations(source.text, findings)}。選択したAIモデルへ送信しますか？検出には誤りや見逃しがあります。`,
     { modal: true },
     "テンプレートで続ける",
     "理解して送信する",
@@ -84,44 +93,57 @@ async function confirmExternalSend(source: KnowledgeSource): Promise<"send" | "t
   return undefined;
 }
 
-async function chooseLanguageModel(): Promise<vscode.LanguageModelChat | undefined> {
+async function chooseLanguageModel(
+  context: vscode.ExtensionContext,
+): Promise<vscode.LanguageModelChat | null | undefined> {
   const models = await vscode.lm.selectChatModels();
   if (!models.length) {
-    void vscode.window.showWarningMessage("利用できるLanguage Modelがありません。テンプレート生成へ切り替えます。");
-    return undefined;
+    void vscode.window.showWarningMessage("利用できるAIモデルがありません。入力用テンプレートへ切り替えます。");
+    return null;
   }
+  const previousModelId = context.globalState.get<string>(previousModelStorageKey);
   const selected = await vscode.window.showQuickPick(
-    models.map((model) => ({
+    orderModelsByPreviousSelection(models, previousModelId).map((model) => ({
       label: model.name,
-      description: `${model.vendor} · ${model.family}`,
+      description: `${model.id === previousModelId ? "前回使用 · " : ""}${model.vendor} · ${model.family}`,
       detail: model.id,
       model,
     })),
-    { title: "ナレッジ生成に使用するLanguage Model", ignoreFocusOut: true },
+    {
+      title: "ナレッジ生成に使用するAIモデル",
+      placeHolder: "前回使用したモデルを先頭に表示します",
+      ignoreFocusOut: true,
+      matchOnDescription: true,
+      matchOnDetail: true,
+    },
   );
+  if (selected) await context.globalState.update(previousModelStorageKey, selected.model.id);
   return selected?.model;
 }
 
 async function generateKnowledge(
   source: KnowledgeSource,
-  mode: Exclude<GeneratorMode, "ask">,
-): Promise<GeneratedKnowledge | undefined> {
-  let generator: KnowledgeGenerator = new TemplateOnlyGenerator();
+  mode: SelectedGeneratorMode,
+  context: vscode.ExtensionContext,
+): Promise<GenerationResult | undefined> {
+  const generator: KnowledgeGenerator = new TemplateOnlyGenerator();
 
   if (mode === "languageModel") {
     const sendChoice = await confirmExternalSend(source);
     if (!sendChoice) return undefined;
     if (sendChoice === "send") {
-      const model = await chooseLanguageModel();
+      const model = await chooseLanguageModel(context);
+      if (model === undefined) return undefined;
       if (model) {
         try {
-          return await vscode.window.withProgress(
+          const generated = await vscode.window.withProgress(
             { location: vscode.ProgressLocation.Notification, title: `${model.name}でナレッジ案を生成中`, cancellable: true },
             async (_progress, token) => new VsCodeLanguageModelGenerator(model, token).generate(source),
           );
+          return { generated, mode: "languageModel" };
         } catch (error) {
           const message = error instanceof vscode.LanguageModelError
-            ? `Language Modelを利用できませんでした（${error.code}）。`
+            ? `AIモデルを利用できませんでした（${error.code}）。`
             : `ナレッジ案を生成できませんでした: ${error instanceof Error ? error.message : String(error)}`;
           const fallback = await vscode.window.showWarningMessage(message, "テンプレートで続ける");
           if (fallback !== "テンプレートで続ける") return undefined;
@@ -130,7 +152,7 @@ async function generateKnowledge(
     }
   }
 
-  return generator.generate(source);
+  return { generated: await generator.generate(source), mode: "template" };
 }
 
 async function editMetadata(generated: GeneratedKnowledge): Promise<GeneratedKnowledge | undefined> {
@@ -193,7 +215,38 @@ async function confirmLocalSave(markdown: string): Promise<boolean> {
   return choice === "保存する";
 }
 
-export async function registerKnowledge(kind: SourceKind): Promise<void> {
+async function confirmPathBoundDraft(markdown: string): Promise<boolean> {
+  const enabled = vscode.workspace
+    .getConfiguration("totonoeKnowledge")
+    .get<boolean>("secretScanning.enabled", true);
+  if (!enabled) return true;
+  const findings = scanForSecrets(markdown);
+  if (!findings.length) return true;
+
+  const choice = await vscode.window.showWarningMessage(
+    `ナレッジ案に秘密情報らしい文字列があります（${summarizeSecretFindings(findings)}）。検出箇所: ${describeSecretFindingLocations(markdown, findings)}。この内容を保存先付きプレビューで編集しますか？`,
+    { modal: true },
+    "確認して編集する",
+  );
+  return choice === "確認して編集する";
+}
+
+async function openPathBoundDraft(target: vscode.Uri, markdown: string): Promise<vscode.TextDocument> {
+  const draftUri = target.with({ scheme: "untitled" });
+  const document = await vscode.workspace.openTextDocument(draftUri);
+  const edit = new vscode.WorkspaceEdit();
+  edit.insert(draftUri, new vscode.Position(0, 0), markdown);
+  if (!(await vscode.workspace.applyEdit(edit))) {
+    throw new Error("ナレッジ案をプレビューへ反映できませんでした。");
+  }
+  return document;
+}
+
+export async function registerKnowledge(
+  kind: SourceKind,
+  context: vscode.ExtensionContext,
+  requestedMode?: SelectedGeneratorMode,
+): Promise<void> {
   const root = workspaceRoot();
   if (!root) {
     void vscode.window.showErrorMessage("ナレッジを保存するワークスペースを開いてください。");
@@ -206,11 +259,13 @@ export async function registerKnowledge(kind: SourceKind): Promise<void> {
   const configuredMode = vscode.workspace
     .getConfiguration("totonoeKnowledge")
     .get<GeneratorMode>("generator", "ask");
-  const mode = await chooseGeneratorMode(configuredMode);
+  const mode = await chooseGeneratorMode(requestedMode ?? configuredMode);
   if (!mode) return;
-  const generated = await generateKnowledge(source, mode);
-  if (!generated) return;
-  const edited = await editMetadata(generated);
+  const result = await generateKnowledge(source, mode, context);
+  if (!result) return;
+  const edited = result.mode === "languageModel"
+    ? result.generated
+    : await editMetadata(result.generated);
   if (!edited) return;
 
   const now = new Date();
@@ -221,18 +276,6 @@ export async function registerKnowledge(kind: SourceKind): Promise<void> {
     createdAt: now.toISOString(),
   };
 
-  const document = await vscode.workspace.openTextDocument({
-    language: "markdown",
-    content: renderKnowledge(draft),
-  });
-  await vscode.window.showTextDocument(document, { preview: false });
-
-  const action = await vscode.window.showInformationMessage(
-    "ナレッジ案を確認・編集し、準備ができたら保存してください。",
-    "knowledge/へ保存",
-  );
-  if (action !== "knowledge/へ保存" || !(await confirmLocalSave(document.getText()))) return;
-
   const repositoryPath = vscode.workspace
     .getConfiguration("totonoeKnowledge")
     .get<string>("repositoryPath", "knowledge")
@@ -242,7 +285,29 @@ export async function registerKnowledge(kind: SourceKind): Promise<void> {
     return;
   }
 
-  const target = await saveKnowledgeDraft(root, repositoryPath, draft, document.getText());
-  await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(target), { preview: false });
-  void vscode.window.showInformationMessage(`ナレッジを保存しました: ${vscode.workspace.asRelativePath(target)}`);
+  const markdown = renderKnowledge(draft);
+  const target = await prepareKnowledgeTarget(root, repositoryPath, draft);
+  const relativeTarget = vscode.workspace.asRelativePath(target);
+
+  if (target.scheme === "file") {
+    if (!(await confirmPathBoundDraft(markdown))) return;
+    const document = await openPathBoundDraft(target, markdown);
+    await vscode.window.showTextDocument(document, { preview: false });
+    void vscode.window.showInformationMessage(
+      `保存先を設定しました: ${relativeTarget}。内容を確認・編集し、Ctrl+Sで保存してください。`,
+    );
+    return;
+  }
+
+  const document = await vscode.workspace.openTextDocument({ language: "markdown", content: markdown });
+  await vscode.window.showTextDocument(document, { preview: false });
+  const action = await vscode.window.showInformationMessage(
+    `ナレッジ案を確認・編集し、準備ができたら保存してください。保存先: ${relativeTarget}`,
+    "ナレッジとして保存",
+  );
+  if (action !== "ナレッジとして保存" || !(await confirmLocalSave(document.getText()))) return;
+
+  const savedTarget = await saveKnowledgeDraft(root, repositoryPath, draft, document.getText());
+  await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(savedTarget), { preview: false });
+  void vscode.window.showInformationMessage(`ナレッジを保存しました: ${relativeTarget}`);
 }

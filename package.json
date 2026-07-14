@@ -43,6 +43,22 @@
         "title": "Totonoe Knowledge: Register Selection"
       },
       {
+        "command": "totonoeKnowledge.registerFromClipboardWithAi",
+        "title": "Totonoe Knowledge: AIでクリップボードから登録"
+      },
+      {
+        "command": "totonoeKnowledge.registerFromClipboardWithTemplate",
+        "title": "Totonoe Knowledge: テンプレートでクリップボードから登録"
+      },
+      {
+        "command": "totonoeKnowledge.registerSelectionWithAi",
+        "title": "Totonoe Knowledge: AIで選択範囲から登録"
+      },
+      {
+        "command": "totonoeKnowledge.registerSelectionWithTemplate",
+        "title": "Totonoe Knowledge: テンプレートで選択範囲から登録"
+      },
+      {
         "command": "totonoeKnowledge.search",
         "title": "Totonoe Knowledge: Search"
       },
@@ -201,9 +217,9 @@
             "languageModel"
           ],
           "enumDescriptions": [
-            "登録時にテンプレートまたはLanguage Modelを選択する",
-            "外部送信せず固定テンプレートを使用する",
-            "VS Codeで選択したLanguage Modelを使用する"
+            "登録時にAI生成または入力用テンプレートを選択する",
+            "AIへ送信せず、要約を行わない入力用テンプレートを使用する",
+            "VS Codeで選択したAIモデルを使用して要約・分類・本文を生成する"
           ],
           "default": "ask",
           "description": "ナレッジ案の生成方法"
@@ -211,7 +227,7 @@
         "totonoeKnowledge.secretScanning.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "外部送信前と保存前に秘密情報らしい文字列を検査する"
+          "description": "外部送信前と登録プレビュー作成時に秘密情報らしい文字列を検査する"
         }
       }
     }
