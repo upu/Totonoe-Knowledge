@@ -1,26 +1,9 @@
 import * as vscode from "vscode";
+import { searchKnowledgeDocuments } from "../search/searchEngine";
 
 interface SearchItem extends vscode.QuickPickItem {
   uri: vscode.Uri;
   score: number;
-}
-
-function frontmatterValue(content: string, key: string): string | undefined {
-  const match = content.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
-  return match?.[1]?.replace(/^"|"$/g, "");
-}
-
-function score(content: string, query: string): number {
-  const terms = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  const title = frontmatterValue(content, "title")?.toLocaleLowerCase() ?? "";
-  const summary = frontmatterValue(content, "summary")?.toLocaleLowerCase() ?? "";
-  const all = content.toLocaleLowerCase();
-  return terms.reduce((total, term) => {
-    if (title.includes(term)) total += 8;
-    if (summary.includes(term)) total += 5;
-    if (all.includes(term)) total += 1;
-    return total;
-  }, 0);
 }
 
 export async function searchKnowledge(): Promise<void> {
@@ -44,21 +27,19 @@ export async function searchKnowledge(): Promise<void> {
     new vscode.RelativePattern(root, `${repositoryPath}/**/*.md`),
   );
 
-  const items: SearchItem[] = [];
+  const documents: Array<{ path: string; content: string; uri: vscode.Uri }> = [];
   for (const uri of files) {
     const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString("utf8");
-    const itemScore = score(content, query.trim());
-    if (itemScore === 0) continue;
-    items.push({
-      label: frontmatterValue(content, "title") ?? vscode.workspace.asRelativePath(uri),
-      description: frontmatterValue(content, "summary"),
-      detail: vscode.workspace.asRelativePath(uri),
-      uri,
-      score: itemScore,
-    });
+    documents.push({ path: vscode.workspace.asRelativePath(uri), content, uri });
   }
 
-  items.sort((a, b) => b.score - a.score);
+  const items: SearchItem[] = searchKnowledgeDocuments(documents, query.trim()).map((result) => ({
+    label: result.title,
+    description: result.summary,
+    detail: `${result.path} · score ${result.score}`,
+    uri: documents.find((document) => document.path === result.path)!.uri,
+    score: result.score,
+  }));
   const selected = await vscode.window.showQuickPick(items, {
     title: `検索結果: ${query}`,
     placeHolder: items.length ? `${items.length}件見つかりました` : "一致するナレッジはありません",
@@ -69,4 +50,3 @@ export async function searchKnowledge(): Promise<void> {
     await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(selected.uri), { preview: false });
   }
 }
-

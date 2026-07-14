@@ -3,7 +3,18 @@
   "displayName": "Totonoe Knowledge",
   "description": "調査や会話を、検索・再利用できるMarkdownナレッジへ整えるVS Code拡張",
   "version": "0.0.1",
-  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/upu/Totonoe-Knowledge.git"
+  },
+  "files": [
+    "dist/**",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "SECURITY.md"
+  ],
   "publisher": "totonoe",
   "engines": {
     "vscode": "^1.95.0"
@@ -26,6 +37,58 @@
         "title": "Totonoe Knowledge: Search"
       }
     ],
+    "languageModelTools": [
+      {
+        "name": "totonoe-knowledge_saveKnowledge",
+        "displayName": "Save Totonoe Knowledge",
+        "toolReferenceName": "totonoeKnowledgeSave",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(book)",
+        "userDescription": "会話で整理した内容を確認付きでMarkdownナレッジとして保存します。",
+        "modelDescription": "Save a structured internal project knowledge entry as Markdown. Use when the user explicitly asks to record a conclusion, investigation, procedure, decision, specification, change, or troubleshooting result. The tool always asks the user for confirmation before writing. Do not use it for temporary notes or when required facts are still unknown.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string", "description": "Specific title that identifies the knowledge later" },
+            "summary": { "type": "string", "description": "One-sentence conclusion" },
+            "type": {
+              "type": "string",
+              "enum": ["investigation", "troubleshooting", "specification", "change", "procedure", "decision"]
+            },
+            "keywords": { "type": "array", "items": { "type": "string" } },
+            "conclusion": { "type": "string" },
+            "background": { "type": "string" },
+            "verified": { "type": "array", "items": { "type": "string" } },
+            "procedure": { "type": "string" },
+            "cautions": { "type": "array", "items": { "type": "string" } },
+            "unresolved": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": [
+            "title", "summary", "type", "keywords", "conclusion", "background",
+            "verified", "procedure", "cautions", "unresolved"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "totonoe-knowledge_searchKnowledge",
+        "displayName": "Search Totonoe Knowledge",
+        "toolReferenceName": "totonoeKnowledgeSearch",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(search)",
+        "userDescription": "ワークスペースに蓄積したプロジェクトナレッジを検索します。",
+        "modelDescription": "Search the workspace's internal Markdown knowledge for existing specifications, past investigations, known issues, historical decisions, procedures, or troubleshooting cases. Use when the answer may depend on project-specific history. Return concise references; do not treat results as current without checking their status and scope.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "description": "Search terms derived from the user's question" },
+            "limit": { "type": "number", "minimum": 1, "maximum": 10, "default": 5 }
+          },
+          "required": ["query"],
+          "additionalProperties": false
+        }
+      }
+    ],
     "configuration": {
       "title": "Totonoe Knowledge",
       "properties": {
@@ -33,6 +96,22 @@
           "type": "string",
           "default": "knowledge",
           "description": "ワークスペースからの相対パスで指定するMarkdownナレッジ保存先"
+        },
+        "totonoeKnowledge.generator": {
+          "type": "string",
+          "enum": ["ask", "template", "languageModel"],
+          "enumDescriptions": [
+            "登録時にテンプレートまたはLanguage Modelを選択する",
+            "外部送信せず固定テンプレートを使用する",
+            "VS Codeで選択したLanguage Modelを使用する"
+          ],
+          "default": "ask",
+          "description": "ナレッジ案の生成方法"
+        },
+        "totonoeKnowledge.secretScanning.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "外部送信前と保存前に秘密情報らしい文字列を検査する"
         }
       }
     }
@@ -41,12 +120,14 @@
     "check": "tsc --noEmit",
     "compile": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap",
     "watch": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap --watch",
-    "package": "npm run check && npm run compile"
+    "test": "tsx --test src/**/*.test.ts",
+    "package": "npm run check && npm test && npm run compile"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/vscode": "^1.95.0",
     "esbuild": "^0.28.1",
+    "tsx": "^4.20.0",
     "typescript": "^5.7.2"
   }
 }
