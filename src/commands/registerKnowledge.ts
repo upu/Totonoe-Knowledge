@@ -22,6 +22,10 @@ import {
   scanForSecrets,
   summarizeSecretFindings,
 } from "../security/secretScanner";
+import {
+  registerPendingKnowledgeDraft,
+  savePendingKnowledgeDraft,
+} from "./saveKnowledgeDraft";
 
 type SourceKind = KnowledgeSource["kind"];
 type GeneratorMode = "ask" | "template" | "languageModel";
@@ -286,10 +290,13 @@ export async function registerKnowledge(
   if (target.scheme === "file") {
     if (!(await confirmPathBoundDraft(markdown))) return;
     const document = await openPathBoundDraft(target, markdown);
+    registerPendingKnowledgeDraft(document, target, relativeTarget);
     await vscode.window.showTextDocument(document, { preview: false });
-    void vscode.window.showInformationMessage(
-      `保存先を設定しました: ${relativeTarget}。内容を確認・編集し、Ctrl+Sで保存してください。`,
+    const action = await vscode.window.showInformationMessage(
+      `保存先を設定しました: ${relativeTarget}。内容を確認・編集して登録してください。Ctrl+Sでも保存できます。`,
+      "この内容を登録",
     );
+    if (action === "この内容を登録") await savePendingKnowledgeDraft(document.uri);
     return;
   }
 

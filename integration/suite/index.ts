@@ -51,6 +51,7 @@ export async function run(): Promise<void> {
     "totonoeKnowledge.useWorkspaceRepository",
     "totonoeKnowledge.search",
     "totonoeKnowledge.searchForVersion",
+    "totonoeKnowledge.saveDraft",
     "totonoeKnowledge.validateRepository",
     "totonoeKnowledge.rebuildSearchIndex",
   ]) {
@@ -179,15 +180,30 @@ export async function run(): Promise<void> {
   const draftUri = draftTarget.with({ scheme: "untitled" });
   const draftDocument = await vscode.workspace.openTextDocument(draftUri);
   const edit = new vscode.WorkspaceEdit();
-  edit.insert(draftUri, new vscode.Position(0, 0), "# path-bound draft\n");
+  edit.insert(draftUri, new vscode.Position(0, 0), "# path-bound draft\nlatest editor content\n");
   assert.equal(await vscode.workspace.applyEdit(edit), true, "draft content should be applied");
-  assert.equal(await draftDocument.save(), true, "Ctrl+S equivalent should save to the associated path");
+  await vscode.window.showTextDocument(draftDocument, { preview: false });
+  await vscode.commands.executeCommand("totonoeKnowledge.saveDraft");
   assert.equal(
     Buffer.from(await vscode.workspace.fs.readFile(draftTarget)).toString("utf8").replaceAll("\r\n", "\n"),
-    "# path-bound draft\n",
-    "associated untitled draft should save to its precomputed Markdown path",
+    "# path-bound draft\nlatest editor content\n",
+    "explicit registration should save the latest editor content to the precomputed path",
   );
   await vscode.workspace.fs.delete(draftTarget);
+
+  const ctrlSTarget = vscode.Uri.joinPath(root, ".totonoe", "path-bound-ctrl-s-test.md");
+  const ctrlSUri = ctrlSTarget.with({ scheme: "untitled" });
+  const ctrlSDocument = await vscode.workspace.openTextDocument(ctrlSUri);
+  const ctrlSEdit = new vscode.WorkspaceEdit();
+  ctrlSEdit.insert(ctrlSUri, new vscode.Position(0, 0), "# Ctrl+S fallback\n");
+  assert.equal(await vscode.workspace.applyEdit(ctrlSEdit), true, "Ctrl+S draft content should be applied");
+  assert.equal(await ctrlSDocument.save(), true, "Ctrl+S should remain a supported save path");
+  assert.equal(
+    Buffer.from(await vscode.workspace.fs.readFile(ctrlSTarget)).toString("utf8").replaceAll("\r\n", "\n"),
+    "# Ctrl+S fallback\n",
+    "Ctrl+S should save to the associated path",
+  );
+  await vscode.workspace.fs.delete(ctrlSTarget);
 
   await vscode.commands.executeCommand("totonoeKnowledge.rebuildSearchIndex");
   const indexUri = vscode.Uri.joinPath(root, ".totonoe", "index.sqlite");

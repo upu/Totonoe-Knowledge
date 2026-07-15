@@ -17,6 +17,7 @@ test("contributes explicit save and search language model tools", async () => {
     capabilities?: { untrustedWorkspaces?: { supported?: boolean } };
     contributes?: {
       commands?: Array<{ command: string; title: string }>;
+      menus?: { "editor/title"?: Array<{ command: string; when?: string }> };
       languageModelTools?: ToolContribution[];
     };
   };
@@ -45,9 +46,16 @@ test("contributes explicit save and search language model tools", async () => {
     "totonoeKnowledge.showRepository",
     "totonoeKnowledge.useWorkspaceRepository",
     "totonoeKnowledge.searchForVersion",
+    "totonoeKnowledge.saveDraft",
   ]) {
     assert.ok(commands.has(command), `command should be contributed: ${command}`);
   }
+  assert.ok(
+    manifest.contributes?.menus?.["editor/title"]?.some((item) =>
+      item.command === "totonoeKnowledge.saveDraft" && item.when?.includes("resourceScheme == untitled"),
+    ),
+    "the explicit registration action should remain available in the preview editor title",
+  );
   for (const command of [
     "totonoeKnowledge.registerFromClipboardWithTemplate",
     "totonoeKnowledge.registerSelectionWithTemplate",

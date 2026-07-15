@@ -2,6 +2,10 @@ import * as vscode from "vscode";
 import { rebuildSearchIndex } from "./commands/rebuildSearchIndex";
 import { registerKnowledge } from "./commands/registerKnowledge";
 import { searchKnowledge } from "./commands/searchKnowledge";
+import {
+  clearPendingKnowledgeDraft,
+  savePendingKnowledgeDraft,
+} from "./commands/saveKnowledgeDraft";
 import { validateKnowledgeRepository } from "./commands/validateKnowledge";
 import { KnowledgeRepositoryLocator } from "./knowledge/repositoryLocation";
 import { SaveKnowledgeTool } from "./tools/saveKnowledgeTool";
@@ -43,6 +47,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("totonoeKnowledge.searchForVersion", () =>
       searchKnowledge(repositoryLocator, true),
     ),
+    vscode.commands.registerCommand("totonoeKnowledge.saveDraft", () => savePendingKnowledgeDraft()),
     vscode.commands.registerCommand("totonoeKnowledge.rebuildSearchIndex", () =>
       rebuildSearchIndex(repositoryLocator),
     ),
@@ -51,6 +56,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.lm.registerTool("totonoe-knowledge_saveKnowledge", new SaveKnowledgeTool(repositoryLocator)),
     vscode.lm.registerTool("totonoe-knowledge_searchKnowledge", new SearchKnowledgeTool(repositoryLocator)),
+    vscode.workspace.onDidSaveTextDocument(clearPendingKnowledgeDraft),
   );
 }
 
