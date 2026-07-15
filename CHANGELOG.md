@@ -27,3 +27,5 @@
 - Show explicit applicability and replacement relationships in Save Tool confirmation
 - Define the OAuth, project ACL, MCP output, and audit boundaries for a future remote repository
 - Add a readable Markdown export and fail-closed backup/restore runbook
+- Add a Git/Pull Request workflow for separated personal and team knowledge repositories
+- Add a reusable team knowledge repository README, ignore rules, CODEOWNERS example, and PR template

@@ -37,6 +37,8 @@ Language Modelはユーザーが開始した登録操作の中で選択します
 
 外部保存先の選択はSettings Syncへ登録しません。選択先へアクセスできなくなった場合は暗黙のフォールバックを行わず、再選択またはワークスペース保存への明示的な切り替えを要求します。詳細は [docs/REPOSITORY_SELECTION.md](docs/REPOSITORY_SELECTION.md) を参照してください。
 
+個人用とチーム用のKnowledgeは別Repositoryと別ACLにし、操作前に`Show Knowledge Repository`で選択先を確認します。Git/PRによる共有、classification、離任時のaccess削除は [docs/GIT_TEAM_WORKFLOW.md](docs/GIT_TEAM_WORKFLOW.md) に従ってください。
+
 ## ローカル検索インデックス
 
 検索インデックスはワークスペース利用時はワークスペース、外部リポジトリ利用時は選択フォルダーの `.totonoe/index.sqlite` に作成されます。元のMarkdown全文は格納しませんが、ファイルパスと検索可能な1〜3文字の派生トークンを保持するため、元ナレッジと同等の機密性があるものとして扱ってください。

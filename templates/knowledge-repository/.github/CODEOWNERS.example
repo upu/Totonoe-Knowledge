@@ -1,0 +1,7 @@
+# Rename this file to CODEOWNERS and replace the placeholder team.
+/investigations/ @your-organization/knowledge-reviewers
+/troubleshooting/ @your-organization/knowledge-reviewers
+/specifications/ @your-organization/knowledge-reviewers
+/changes/ @your-organization/knowledge-reviewers
+/procedures/ @your-organization/knowledge-reviewers
+/decisions/ @your-organization/knowledge-reviewers
