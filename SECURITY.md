@@ -43,6 +43,10 @@ Language Modelはユーザーが開始した登録操作の中で選択します
 
 `**/.totonoe/index.sqlite` はこのリポジトリの `.gitignore` に含まれます。利用先リポジトリでも意図せずGit、バックアップ、artifactへ含めないことを確認してください。インデックスは削除してもMarkdownから再生成でき、破損時も正本へ影響しません。
 
+## Remote Repository / MCP
+
+HTTP RepositoryとMCPサーバは未実装です。将来実装するときの必須境界は [Remote Repository / MCP セキュリティモデル](docs/REMOTE_SECURITY_MODEL.md) に定義しています。API契約は [Remote Repository API / MCP契約](docs/REMOTE_REPOSITORY_API.md)、backupとrestoreは [Backup / Export / Restore Runbook](docs/BACKUP_RESTORE.md) を参照してください。これらを満たさない試作サーバへ機密ナレッジを送らないでください。
+
 ## 脆弱性の報告
 
 認証情報、顧客データ、非公開ナレッジを公開Issueへ記載しないでください。公開しても安全な最小再現だけをIssueへ記載し、機密情報を伴う場合はリポジトリ所有者へ非公開で連絡してください。

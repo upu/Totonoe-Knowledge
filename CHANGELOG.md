@@ -25,3 +25,5 @@
 - Add inclusive applicability bounds and target-version search with transitive `supersedes` filtering
 - Validate malformed, incompatible, and reversed version ranges without requiring legacy entry migration
 - Show explicit applicability and replacement relationships in Save Tool confirmation
+- Define the OAuth, project ACL, MCP output, and audit boundaries for a future remote repository
+- Add a readable Markdown export and fail-closed backup/restore runbook
