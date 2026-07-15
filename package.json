@@ -85,8 +85,22 @@
       {
         "command": "totonoeKnowledge.rebuildSearchIndex",
         "title": "Totonoe Knowledge: Rebuild Search Index"
+      },
+      {
+        "command": "totonoeKnowledge.saveDraft",
+        "title": "Totonoe Knowledge: この内容を登録",
+        "icon": "$(save)"
       }
     ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "totonoeKnowledge.saveDraft",
+          "when": "resourceScheme == untitled && editorLangId == markdown",
+          "group": "navigation"
+        }
+      ]
+    },
     "languageModelTools": [
       {
         "name": "totonoe-knowledge_saveKnowledge",
