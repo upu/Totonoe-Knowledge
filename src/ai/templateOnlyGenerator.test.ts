@@ -11,3 +11,35 @@ test("creates an offline editable draft without inventing facts", async () => {
   assert.equal(result.summary, "");
   assert.deepEqual(result.content.verified, []);
 });
+
+test("uses prepared metadata and sections without a model call", async () => {
+  const generator = new TemplateOnlyGenerator();
+  const result = await generator.generate({
+    kind: "selection",
+    text: `---
+prepared_knowledge: "1"
+title: "構造化済み"
+summary: "AIなしで読み込む"
+type: procedure
+keywords: ["offline", "dogfooding"]
+---
+# 結論
+ローカルで読み込む。
+# 背景
+AIクレジットを使わない。
+# 確認したこと
+- front matterを解析した
+# 対応方法
+選択範囲から登録する。
+# 注意点
+- 内容は人が確認する
+# 未解決事項
+- なし`,
+  });
+
+  assert.equal(result.title, "構造化済み");
+  assert.equal(result.summary, "AIなしで読み込む");
+  assert.equal(result.type, "procedure");
+  assert.deepEqual(result.keywords, ["offline", "dogfooding"]);
+  assert.deepEqual(result.content.unresolved, ["なし"]);
+});

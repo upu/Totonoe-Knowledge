@@ -23,7 +23,7 @@
 - `Totonoe Knowledge: Register from Clipboard`
 - `Totonoe Knowledge: Register Selection`
 - `Totonoe Knowledge: AIでクリップボード／選択範囲から登録`
-- `Totonoe Knowledge: テンプレートでクリップボード／選択範囲から登録`
+- `Totonoe Knowledge: AIを使わずクリップボード／選択範囲から登録`
 - `Totonoe Knowledge: Select Knowledge Repository Folder`
 - `Totonoe Knowledge: Show Knowledge Repository`
 - `Totonoe Knowledge: Use Workspace Repository`
@@ -32,12 +32,12 @@
 - `Totonoe Knowledge: Validate Repository`
 - `Totonoe Knowledge: Rebuild Search Index`
 
-先頭の2コマンドでは登録時に生成方法を選択します。AI／テンプレートを決めている場合は、それぞれの直接コマンドも使用できます。
+先頭の2コマンドでは登録時に生成方法を選択します。AIを使うかどうか決めている場合は、それぞれの直接コマンドも使用できます。
 
 - `AIでナレッジ案を作る`: VS Codeで利用可能なAIモデルを選び、タイトル、要約、種別、キーワード、本文を生成
-- `入力用テンプレートを作る`: AIへ送信せず、要約を行わない編集用のひな形を生成
+- `AIを使わずナレッジ案を作る`: 構造化済みMarkdownをローカルで読み込む。通常テキストでは入力用のひな形を生成
 
-AI生成時は分類を含む生成結果をMarkdownプレビューで直接確認・編集します。テンプレート時はタイトル、超要約、種別、キーワードを入力してから本文を編集します。AIの構造化出力は実行時に検証され、失敗した場合はテンプレートへ安全に切り替えられます。
+AI生成時は分類を含む生成結果をMarkdownプレビューで直接確認・編集します。AIなしでは、`prepared_knowledge: "1"`形式ならtitle、summary、type、keywordsと固定本文セクションを事前入力し、通常テキストなら従来の入力用ひな形を作ります。詳細は [docs/PREPARED_KNOWLEDGE.md](docs/PREPARED_KNOWLEDGE.md) を参照してください。AIの構造化出力は実行時に検証され、失敗した場合はAIを使わない登録へ安全に切り替えられます。
 
 ローカルワークスペースでは、種別、ID、タイトルから `knowledge/<種別>/<ID>-<タイトル>.md` を先に決め、その保存先に関連付けたプレビューを開きます。`Untitled-1.md`の保存先を手動で選ぶ必要はなく、編集後に通常どおり `Ctrl+S` で保存できます。
 
@@ -58,7 +58,7 @@ Save Toolはファイル作成前にVS Codeの確認を要求します。Search 
 
 このGitHubリポジトリは機能のソースコードを公開する場所です。実際の社外秘ナレッジは、この公開リポジトリへ保存しないでください。社内Git、privateリポジトリ、またはアクセス制御されたローカルワークスペースを別に用意してください。
 
-テンプレート生成は外部通信を行いません。AI生成を選ぶと、登録元テキストがユーザーの選択したVS Code Language Model Providerへ送信されます。外部送信前と、生成した保存先付きプレビューを開く前に秘密情報らしい文字列を検査して警告しますが、検出には誤りや見逃しがあります。
+AIを使わない登録は外部通信を行いません。AI生成を選ぶと、登録元テキストがユーザーの選択したVS Code Language Model Providerへ送信されます。外部送信前と、生成した保存先付きプレビューを開く前に秘密情報らしい文字列を検査して警告しますが、検出には誤りや見逃しがあります。
 
 詳細は [SECURITY.md](SECURITY.md) を参照してください。
 

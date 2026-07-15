@@ -48,7 +48,7 @@
       },
       {
         "command": "totonoeKnowledge.registerFromClipboardWithTemplate",
-        "title": "Totonoe Knowledge: テンプレートでクリップボードから登録"
+        "title": "Totonoe Knowledge: AIを使わずクリップボードから登録"
       },
       {
         "command": "totonoeKnowledge.registerSelectionWithAi",
@@ -56,7 +56,7 @@
       },
       {
         "command": "totonoeKnowledge.registerSelectionWithTemplate",
-        "title": "Totonoe Knowledge: テンプレートで選択範囲から登録"
+        "title": "Totonoe Knowledge: AIを使わず選択範囲から登録"
       },
       {
         "command": "totonoeKnowledge.selectRepository",
@@ -245,8 +245,8 @@
             "languageModel"
           ],
           "enumDescriptions": [
-            "登録時にAI生成または入力用テンプレートを選択する",
-            "AIへ送信せず、要約を行わない入力用テンプレートを使用する",
+            "登録時にAI生成またはAIを使わない登録を選択する",
+            "AIへ送信せず、構造化済みMarkdownの読込または通常テキスト用の入力テンプレートを使用する",
             "VS Codeで選択したAIモデルを使用して要約・分類・本文を生成する"
           ],
           "default": "ask",

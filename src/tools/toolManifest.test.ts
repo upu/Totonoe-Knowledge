@@ -16,7 +16,7 @@ test("contributes explicit save and search language model tools", async () => {
   const manifest = JSON.parse(await readFile("package.json", "utf8")) as {
     capabilities?: { untrustedWorkspaces?: { supported?: boolean } };
     contributes?: {
-      commands?: Array<{ command: string }>;
+      commands?: Array<{ command: string; title: string }>;
       languageModelTools?: ToolContribution[];
     };
   };
@@ -47,5 +47,14 @@ test("contributes explicit save and search language model tools", async () => {
     "totonoeKnowledge.searchForVersion",
   ]) {
     assert.ok(commands.has(command), `command should be contributed: ${command}`);
+  }
+  for (const command of [
+    "totonoeKnowledge.registerFromClipboardWithTemplate",
+    "totonoeKnowledge.registerSelectionWithTemplate",
+  ]) {
+    assert.match(
+      manifest.contributes?.commands?.find((candidate) => candidate.command === command)?.title ?? "",
+      /AIを使わず/,
+    );
   }
 });
