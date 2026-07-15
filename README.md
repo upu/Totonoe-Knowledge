@@ -37,7 +37,7 @@
 - `AIでナレッジ案を作る`: VS Codeで利用可能なAIモデルを選び、タイトル、要約、種別、キーワード、本文を生成
 - `AIを使わずナレッジ案を作る`: 構造化済みMarkdownをローカルで読み込む。通常テキストでは入力用のひな形を生成
 
-AI生成時は分類を含む生成結果をMarkdownプレビューで直接確認・編集します。AIなしでは、`prepared_knowledge: "1"`形式ならtitle、summary、type、keywordsと固定本文セクションを事前入力し、通常テキストなら従来の入力用ひな形を作ります。詳細は [docs/PREPARED_KNOWLEDGE.md](docs/PREPARED_KNOWLEDGE.md) を参照してください。AIの構造化出力は実行時に検証され、失敗した場合はAIを使わない登録へ安全に切り替えられます。
+AI生成時は分類を含む生成結果をMarkdownプレビューで直接確認・編集します。AIなしでは、`prepared_knowledge: "1"`形式ならtitle、summary、type、keywordsと固定本文セクションを再入力させずプレビューへ反映し、通常テキストなら従来の入力用ひな形を作ります。詳細は [docs/PREPARED_KNOWLEDGE.md](docs/PREPARED_KNOWLEDGE.md) を参照してください。AIの構造化出力は実行時に検証され、失敗した場合はAIを使わない登録へ安全に切り替えられます。
 
 ローカルワークスペースでは、種別、ID、タイトルから `knowledge/<種別>/<ID>-<タイトル>.md` を先に決め、その保存先に関連付けたプレビューを開きます。`Untitled-1.md`の保存先を手動で選ぶ必要はなく、編集後に通常どおり `Ctrl+S` で保存できます。
 

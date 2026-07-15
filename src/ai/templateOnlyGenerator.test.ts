@@ -4,8 +4,10 @@ import { TemplateOnlyGenerator } from "./templateOnlyGenerator";
 
 test("creates an offline editable draft without inventing facts", async () => {
   const generator = new TemplateOnlyGenerator();
-  const result = await generator.generate({ kind: "clipboard", text: "# 調査メモ\n確認中の内容" });
+  const generation = await generator.generateWithOrigin({ kind: "clipboard", text: "# 調査メモ\n確認中の内容" });
+  const result = generation.generated;
 
+  assert.equal(generation.origin, "template");
   assert.equal(result.title, "調査メモ");
   assert.equal(result.type, "investigation");
   assert.equal(result.summary, "");
@@ -14,7 +16,7 @@ test("creates an offline editable draft without inventing facts", async () => {
 
 test("uses prepared metadata and sections without a model call", async () => {
   const generator = new TemplateOnlyGenerator();
-  const result = await generator.generate({
+  const generation = await generator.generateWithOrigin({
     kind: "selection",
     text: `---
 prepared_knowledge: "1"
@@ -36,7 +38,9 @@ AIクレジットを使わない。
 # 未解決事項
 - なし`,
   });
+  const result = generation.generated;
 
+  assert.equal(generation.origin, "prepared");
   assert.equal(result.title, "構造化済み");
   assert.equal(result.summary, "AIなしで読み込む");
   assert.equal(result.type, "procedure");
