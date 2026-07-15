@@ -3,26 +3,23 @@ import { directoryFor, renderKnowledge, slugify } from "./markdown";
 import type { KnowledgeDraft } from "./types";
 
 export function knowledgeTarget(
-  root: vscode.Uri,
-  repositoryPath: string,
+  repositoryRoot: vscode.Uri,
   draft: KnowledgeDraft,
 ): vscode.Uri {
   return vscode.Uri.joinPath(
-    root,
-    repositoryPath,
+    repositoryRoot,
     directoryFor(draft.type),
     `${draft.id}-${slugify(draft.title)}.md`,
   );
 }
 
 export async function prepareKnowledgeTarget(
-  root: vscode.Uri,
-  repositoryPath: string,
+  repositoryRoot: vscode.Uri,
   draft: KnowledgeDraft,
 ): Promise<vscode.Uri> {
-  const target = knowledgeTarget(root, repositoryPath, draft);
+  const target = knowledgeTarget(repositoryRoot, draft);
   await vscode.workspace.fs.createDirectory(
-    vscode.Uri.joinPath(root, repositoryPath, directoryFor(draft.type)),
+    vscode.Uri.joinPath(repositoryRoot, directoryFor(draft.type)),
   );
   try {
     await vscode.workspace.fs.stat(target);
@@ -34,12 +31,11 @@ export async function prepareKnowledgeTarget(
 }
 
 export async function saveKnowledgeDraft(
-  root: vscode.Uri,
-  repositoryPath: string,
+  repositoryRoot: vscode.Uri,
   draft: KnowledgeDraft,
   markdown = renderKnowledge(draft),
 ): Promise<vscode.Uri> {
-  const target = await prepareKnowledgeTarget(root, repositoryPath, draft);
+  const target = await prepareKnowledgeTarget(repositoryRoot, draft);
   await vscode.workspace.fs.writeFile(target, Buffer.from(markdown, "utf8"));
   return target;
 }

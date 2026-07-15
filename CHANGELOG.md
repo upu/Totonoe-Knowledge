@@ -19,3 +19,6 @@
 - Add direct AI/template registration commands with clearer user-facing descriptions
 - Reuse the previously selected AI model and remove redundant AI metadata prompts
 - Preselect the type/ID/title-derived local save path so a reviewed draft saves with `Ctrl+S`
+- Add an explicitly confirmed external repository picker shared by registration, search, validation, and Agent tools
+- Keep external repository URIs machine-local, fail closed when unavailable, and ignore non-knowledge root Markdown
+- Preserve discovery of legacy root Markdown entries that contain a `K-` knowledge ID

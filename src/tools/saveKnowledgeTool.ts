@@ -1,7 +1,10 @@
 import * as vscode from "vscode";
 import { createKnowledgeId } from "../knowledge/id";
-import { isValidRepositoryPath } from "../knowledge/repositoryPath";
 import { saveKnowledgeDraft } from "../knowledge/repository";
+import {
+  KnowledgeRepositoryLocator,
+  repositoryRelativePath,
+} from "../knowledge/repositoryLocation";
 import { knowledgeTypes, type KnowledgeDraft, type KnowledgeType } from "../knowledge/types";
 import { scanForSecrets, summarizeSecretFindings } from "../security/secretScanner";
 
@@ -40,6 +43,8 @@ function validateInput(input: SaveKnowledgeInput): void {
 }
 
 export class SaveKnowledgeTool implements vscode.LanguageModelTool<SaveKnowledgeInput> {
+  constructor(private readonly repositoryLocator: KnowledgeRepositoryLocator) {}
+
   prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<SaveKnowledgeInput>,
   ): vscode.PreparedToolInvocation {
@@ -51,7 +56,7 @@ export class SaveKnowledgeTool implements vscode.LanguageModelTool<SaveKnowledge
       invocationMessage: `「${options.input.title}」をナレッジとして保存しています`,
       confirmationMessages: {
         title: "Totonoe Knowledgeへ保存しますか？",
-        message: `タイトル: **${options.input.title}**\n\nワークスペースのknowledgeディレクトリへMarkdownを作成します。${warning}`,
+        message: `タイトル: **${options.input.title}**\n\n選択中のTotonoe KnowledgeリポジトリへMarkdownを作成します。${warning}`,
       },
     };
   }
@@ -63,15 +68,7 @@ export class SaveKnowledgeTool implements vscode.LanguageModelTool<SaveKnowledge
     if (token.isCancellationRequested) throw new vscode.CancellationError();
     validateInput(options.input);
 
-    const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-    if (!root) throw new Error("ナレッジを保存するワークスペースが開かれていません。");
-    const repositoryPath = vscode.workspace
-      .getConfiguration("totonoeKnowledge")
-      .get<string>("repositoryPath", "knowledge")
-      .trim();
-    if (!isValidRepositoryPath(repositoryPath)) {
-      throw new Error("repositoryPathにはワークスペース内の相対パスを指定してください。");
-    }
+    const location = await this.repositoryLocator.resolve();
 
     const now = new Date();
     const input = options.input;
@@ -95,8 +92,8 @@ export class SaveKnowledgeTool implements vscode.LanguageModelTool<SaveKnowledge
         unresolved: input.unresolved.map((value) => value.trim()).filter(Boolean),
       },
     };
-    const target = await saveKnowledgeDraft(root, repositoryPath, draft);
-    const relativePath = vscode.workspace.asRelativePath(target);
+    const target = await saveKnowledgeDraft(location.repositoryRoot, draft);
+    const relativePath = repositoryRelativePath(location, target);
     return new vscode.LanguageModelToolResult([
       new vscode.LanguageModelTextPart(
         `ナレッジ ${draft.id} を保存しました。タイトル: ${draft.title}。ファイル: ${relativePath}`,

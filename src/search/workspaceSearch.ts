@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { findKnowledgeMarkdownFiles } from "../knowledge/knowledgeFiles";
 import {
   SqliteKnowledgeIndex,
   createFtsQuery,
@@ -82,18 +83,15 @@ function relativePath(root: vscode.Uri, uri: vscode.Uri): string {
 }
 
 async function collectSources(
-  root: vscode.Uri,
-  repositoryPath: string,
+  repositoryRoot: vscode.Uri,
 ): Promise<WorkspaceKnowledgeSource[]> {
-  const files = await vscode.workspace.findFiles(
-    new vscode.RelativePattern(root, `${repositoryPath}/**/*.md`),
-  );
+  const files = await findKnowledgeMarkdownFiles(repositoryRoot);
   return Promise.all(files.map(async (uri) => {
     const stat = await vscode.workspace.fs.stat(uri);
     let content: Promise<string> | undefined;
     return {
       uri,
-      path: relativePath(root, uri),
+      path: relativePath(repositoryRoot, uri),
       fingerprint: `${stat.mtime}:${stat.size}`,
       readContent: async () => {
         content ??= Promise.resolve(vscode.workspace.fs.readFile(uri))
@@ -114,11 +112,11 @@ async function readDocuments(
 }
 
 export async function searchWorkspaceKnowledge(
-  root: vscode.Uri,
-  repositoryPath: string,
+  repositoryRoot: vscode.Uri,
+  indexRoot: vscode.Uri,
   query: string,
 ): Promise<WorkspaceSearchResult> {
-  const sources = await collectSources(root, repositoryPath);
+  const sources = await collectSources(repositoryRoot);
   if (!createFtsQuery(query)) {
     return {
       results: searchKnowledgeDocuments(await readDocuments(sources), query),
@@ -126,7 +124,7 @@ export async function searchWorkspaceKnowledge(
     };
   }
   try {
-    const index = indexFor(root);
+    const index = indexFor(indexRoot);
     const sync = await index.sync(sources);
     const candidates = new Set(await index.candidatePaths(query));
     const documents = await readDocuments(sources.filter((source) => candidates.has(source.path)));
@@ -145,12 +143,12 @@ export async function searchWorkspaceKnowledge(
 }
 
 export async function rebuildWorkspaceKnowledgeIndex(
-  root: vscode.Uri,
-  repositoryPath: string,
+  repositoryRoot: vscode.Uri,
+  indexRoot: vscode.Uri,
 ): Promise<KnowledgeIndexSyncResult> {
-  return indexFor(root).sync(await collectSources(root, repositoryPath), true);
+  return indexFor(indexRoot).sync(await collectSources(repositoryRoot), true);
 }
 
-export function knowledgeIndexUri(root: vscode.Uri): vscode.Uri {
-  return vscode.Uri.joinPath(root, indexDirectory, indexFile);
+export function knowledgeIndexUri(indexRoot: vscode.Uri): vscode.Uri {
+  return vscode.Uri.joinPath(indexRoot, indexDirectory, indexFile);
 }

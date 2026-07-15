@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { isValidRepositoryPath } from "../knowledge/repositoryPath";
+import { KnowledgeRepositoryLocator } from "../knowledge/repositoryLocation";
 import { searchWorkspaceKnowledge } from "../search/workspaceSearch";
 
 interface SearchItem extends vscode.QuickPickItem {
@@ -7,12 +7,9 @@ interface SearchItem extends vscode.QuickPickItem {
   score: number;
 }
 
-export async function searchKnowledge(): Promise<void> {
-  const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-  if (!root) {
-    void vscode.window.showErrorMessage("検索するワークスペースを開いてください。");
-    return;
-  }
+export async function searchKnowledge(repositoryLocator: KnowledgeRepositoryLocator): Promise<void> {
+  const location = await repositoryLocator.resolveOrNotify();
+  if (!location) return;
 
   const query = await vscode.window.showInputBox({
     title: "Totonoe Knowledge Search",
@@ -21,18 +18,9 @@ export async function searchKnowledge(): Promise<void> {
   });
   if (!query?.trim()) return;
 
-  const repositoryPath = vscode.workspace
-    .getConfiguration("totonoeKnowledge")
-    .get<string>("repositoryPath", "knowledge")
-    .trim();
-  if (!isValidRepositoryPath(repositoryPath)) {
-    void vscode.window.showErrorMessage("repositoryPathにはワークスペース内の相対パスを指定してください。");
-    return;
-  }
-
   const search = await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Window, title: "Totonoe Knowledgeを検索中" },
-    () => searchWorkspaceKnowledge(root, repositoryPath, query.trim()),
+    () => searchWorkspaceKnowledge(location.repositoryRoot, location.indexRoot, query.trim()),
   );
   if (search.indexError) {
     void vscode.window.showWarningMessage(
@@ -44,7 +32,7 @@ export async function searchKnowledge(): Promise<void> {
     label: result.title,
     description: result.summary,
     detail: `${result.type} · ${result.status} · score ${result.score} · ${result.path}`,
-    uri: vscode.Uri.joinPath(root, ...result.path.split("/")),
+    uri: vscode.Uri.joinPath(location.repositoryRoot, ...result.path.split("/")),
     score: result.score,
   }));
   const selected = await vscode.window.showQuickPick(items, {

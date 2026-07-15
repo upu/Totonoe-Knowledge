@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { isValidRepositoryPath } from "../knowledge/repositoryPath";
+import { KnowledgeRepositoryLocator } from "../knowledge/repositoryLocation";
 import { searchWorkspaceKnowledge } from "../search/workspaceSearch";
 
 export interface SearchKnowledgeInput {
@@ -8,6 +8,8 @@ export interface SearchKnowledgeInput {
 }
 
 export class SearchKnowledgeTool implements vscode.LanguageModelTool<SearchKnowledgeInput> {
+  constructor(private readonly repositoryLocator: KnowledgeRepositoryLocator) {}
+
   async invoke(
     options: vscode.LanguageModelToolInvocationOptions<SearchKnowledgeInput>,
     token: vscode.CancellationToken,
@@ -16,17 +18,9 @@ export class SearchKnowledgeTool implements vscode.LanguageModelTool<SearchKnowl
     const query = options.input.query.trim();
     if (!query) throw new Error("queryは必須です。");
 
-    const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-    if (!root) throw new Error("ナレッジを検索するワークスペースが開かれていません。");
-    const repositoryPath = vscode.workspace
-      .getConfiguration("totonoeKnowledge")
-      .get<string>("repositoryPath", "knowledge")
-      .trim();
-    if (!isValidRepositoryPath(repositoryPath)) {
-      throw new Error("repositoryPathにはワークスペース内の相対パスを指定してください。");
-    }
+    const location = await this.repositoryLocator.resolve();
 
-    const search = await searchWorkspaceKnowledge(root, repositoryPath, query);
+    const search = await searchWorkspaceKnowledge(location.repositoryRoot, location.indexRoot, query);
     if (token.isCancellationRequested) throw new vscode.CancellationError();
 
     const limit = Math.min(Math.max(options.input.limit ?? 5, 1), 10);
