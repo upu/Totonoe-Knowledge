@@ -2,7 +2,7 @@
   "name": "totonoe-knowledge",
   "displayName": "Totonoe Knowledge",
   "description": "調査や会話を、検索・再利用できるMarkdownナレッジへ整えるVS Code拡張",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -2,7 +2,7 @@
 
 調査・判断・試行錯誤の結果を、後から検索・再利用・統合できるMarkdownナレッジへ整えるVS Code拡張です。
 
-> Status: pre-alpha / v0.1 dogfooding中 / v0.3 search foundation
+> Status: v0.1 Local MVP complete / v0.2 Copilot Tool Integration next
 
 ## なぜ作るのか
 
@@ -15,6 +15,8 @@
 - 変更履歴を上書きせず、`supersedes` と適用範囲で関係を表す
 - 機能のソースコードと、利用者が扱う機密ナレッジを分離する
 - AIなしでも登録・検索できる状態を維持する
+
+Entryの分割・統合やtype選択は [Knowledge Entryの粒度ガイドライン](docs/KNOWLEDGE_GRANULARITY.md) を参照してください。
 
 ## 機能
 

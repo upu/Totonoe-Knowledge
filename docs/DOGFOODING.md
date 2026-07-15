@@ -52,3 +52,5 @@ Codex、ローカルLLM、人手などで既に整理した内容は、[`prepare
 - [ ] v0.2へ持ち越す改善点をIssue化した
 
 この判定を満たすまでは、コード上の機能が揃っていてもv0.1マイルストーンは完了としません。
+
+Entryの分割・統合、type、title、summary、keywordsの判断基準は [Knowledge Entryの粒度ガイドライン](KNOWLEDGE_GRANULARITY.md) を使用します。
