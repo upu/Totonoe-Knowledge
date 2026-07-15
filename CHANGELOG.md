@@ -29,3 +29,5 @@
 - Add a readable Markdown export and fail-closed backup/restore runbook
 - Add a Git/Pull Request workflow for separated personal and team knowledge repositories
 - Add a reusable team knowledge repository README, ignore rules, CODEOWNERS example, and PR template
+- Parse versioned prepared Markdown into a complete draft without calling a Language Model
+- Rename direct offline registration commands so their zero-AI behavior is clear

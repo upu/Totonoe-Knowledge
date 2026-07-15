@@ -62,8 +62,8 @@ async function chooseGeneratorMode(configured: GeneratorMode): Promise<SelectedG
       mode: "languageModel" as const,
     },
     {
-      label: "$(file-text) 入力用テンプレートを作る",
-      description: "AIへ送信せず、要約を行わない入力用のひな形を作成",
+      label: "$(file-text) AIを使わずナレッジ案を作る",
+      description: "構造化済みMarkdownを読み込むか、通常テキスト用の入力ひな形を作成",
       mode: "template" as const,
     },
   ], {
@@ -151,7 +151,12 @@ async function generateKnowledge(
     }
   }
 
-  return { generated: await generator.generate(source), mode: "template" };
+  try {
+    return { generated: await generator.generate(source), mode: "template" };
+  } catch (error) {
+    void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
+    return undefined;
+  }
 }
 
 async function editMetadata(generated: GeneratedKnowledge): Promise<GeneratedKnowledge | undefined> {
