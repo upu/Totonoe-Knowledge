@@ -62,6 +62,14 @@ test("normalizes Japanese and latin text case-insensitively", () => {
   assert.equal(results[0].title, "SSHログが80文字で折り返される原因");
 });
 
+test("preserves punctuation-delimited error-code search", () => {
+  const errorDocument = {
+    path: "knowledge/troubleshooting/K-003.md",
+    content: documents[0].content.replace("COLUMNS環境変数", "ERR-123 は COLUMNS環境変数"),
+  };
+  assert.equal(searchKnowledgeDocuments([errorDocument], "err-123")[0]?.path, errorDocument.path);
+});
+
 test("returns no result for an empty or unmatched query", () => {
   assert.deepEqual(searchKnowledgeDocuments(documents, "  "), []);
   assert.deepEqual(searchKnowledgeDocuments(documents, "Kubernetes"), []);

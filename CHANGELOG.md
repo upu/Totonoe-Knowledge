@@ -31,3 +31,5 @@
 - Add a reusable team knowledge repository README, ignore rules, CODEOWNERS example, and PR template
 - Parse versioned prepared Markdown into a complete draft without calling a Language Model
 - Rename direct offline registration commands so their zero-AI behavior is clear
+- Discover unspaced Japanese natural-language queries through bounded 2/3-gram candidates and Markdown reranking
+- Add the 12 v0.1 dogfooding searches as SQLite/direct-scan parity regressions

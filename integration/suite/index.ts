@@ -89,6 +89,18 @@ export async function run(): Promise<void> {
       externalEntry,
       await vscode.workspace.fs.readFile(vscode.Uri.joinPath(root, "knowledge", "investigations", "valid.md")),
     );
+    const japaneseSearchEntry = vscode.Uri.joinPath(externalRoot, "investigations", "japanese-search.md");
+    const japaneseSearchContent = Buffer.from(await vscode.workspace.fs.readFile(externalEntry))
+      .toString("utf8")
+      .replace("K-20260715-120000000-test", "K-20260715-120000000-japanese")
+      .replace('title: "Integration test knowledge"', 'title: "SQLite FTS候補抽出"')
+      .replace(
+        'summary: "A sanitized fixture used only by Extension Host tests"',
+        'summary: "日本語部分一致をn-gramで候補抽出する"',
+      )
+      .replace('  - "integration-test"', '  - "日本語検索"')
+      .replace("This fixture is valid.", "英数字や日本語の途中一致を維持する。");
+    await vscode.workspace.fs.writeFile(japaneseSearchEntry, Buffer.from(japaneseSearchContent, "utf8"));
     const legacyRootEntry = vscode.Uri.joinPath(externalRoot, "Untitled-1.md");
     const legacyContent = Buffer.from(await vscode.workspace.fs.readFile(externalEntry))
       .toString("utf8")
@@ -110,17 +122,28 @@ export async function run(): Promise<void> {
     const externalFiles = await findKnowledgeMarkdownFiles(externalRoot);
     assert.deepEqual(
       new Set(externalFiles.map((uri) => uri.toString())),
-      new Set([externalEntry.toString(), legacyRootEntry.toString()]),
+      new Set([externalEntry.toString(), japaneseSearchEntry.toString(), legacyRootEntry.toString()]),
       "type-directory and legacy root entries should be included while README is ignored",
     );
     const sync = await rebuildWorkspaceKnowledgeIndex(externalRoot, externalRoot);
-    assert.equal(sync.added + sync.updated + sync.unchanged, 2, "external entries should be indexed");
+    assert.equal(sync.added + sync.updated + sync.unchanged, 3, "external entries should be indexed");
     assert.ok(
       (await vscode.workspace.fs.stat(knowledgeIndexUri(externalRoot))).size > 0,
       "external repository should own its disposable index",
     );
     const search = await searchWorkspaceKnowledge(externalRoot, externalRoot, "legacy-root");
     assert.equal(search.results[0]?.path, "Untitled-1.md");
+    const japaneseSearch = await searchWorkspaceKnowledge(
+      externalRoot,
+      externalRoot,
+      "日本語の途中の文字から探す",
+    );
+    assert.equal(japaneseSearch.backend, "sqlite", "unspaced Japanese should use SQLite candidates");
+    assert.equal(
+      japaneseSearch.results[0]?.path,
+      "investigations/japanese-search.md",
+      "unspaced Japanese should find the overlapping entry in the Extension Host",
+    );
     assert.equal(
       (await searchWorkspaceKnowledge(externalRoot, externalRoot, "legacy-root", "17.0")).results.length,
       0,

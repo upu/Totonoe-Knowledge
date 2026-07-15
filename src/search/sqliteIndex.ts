@@ -1,9 +1,14 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Database, InitSqlJsStatic, SqlJsStatic } from "sql.js";
-import { normalizeSearchText, parseKnowledgeDocument } from "./searchEngine";
+import {
+  createSearchQueryUnits,
+  normalizeSearchText,
+  parseKnowledgeDocument,
+} from "./searchEngine";
 
 const schemaVersion = "1";
+const candidateLimit = 200;
 
 let sqlitePromise: Promise<SqlJsStatic> | undefined;
 
@@ -143,6 +148,15 @@ function queryGroup(value: string): string | undefined {
 export function createFtsQuery(query: string): string | undefined {
   const terms = normalizeSearchText(query).split(/\s+/).filter(Boolean);
   const groups = terms.flatMap((term) => {
+    const units = createSearchQueryUnits(term);
+    const mixesJapaneseAndAscii = /[a-z0-9]/.test(term)
+      && /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(term);
+    if (units.some((unit) => unit.kind !== "exact") || mixesJapaneseAndAscii) {
+      return units.flatMap((unit) => {
+        const group = unit.kind === "exact" ? queryGroup(unit.value) : `"${unit.value}"`;
+        return group ? [`(${group})`] : [];
+      });
+    }
     const segmentGroups = searchableSegments(term)
       .map(queryGroup)
       .filter((group): group is string => Boolean(group));
@@ -237,7 +251,7 @@ export class SqliteKnowledgeIndex {
         if (!schemaIsCurrent(database)) return [];
         return queryRows(
           database,
-          "SELECT path FROM knowledge_fts WHERE knowledge_fts MATCH ?",
+          `SELECT path FROM knowledge_fts WHERE knowledge_fts MATCH ? LIMIT ${candidateLimit}`,
           [match],
         ).map((row) => String(row.path));
       } finally {
