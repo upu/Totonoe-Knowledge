@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.0.1 - Unreleased
+## 0.1.0 - 2026-07-15
 
 - Add clipboard and selection-based knowledge registration
 - Add offline template and VS Code Language Model generation
@@ -35,3 +35,4 @@
 - Add the 12 v0.1 dogfooding searches as SQLite/direct-scan parity regressions
 - Send valid prepared knowledge directly to the Markdown preview without repeated metadata prompts
 - Add a reusable `この内容を登録` preview action with conflict-safe latest-content saving
+- Complete 12-entry v0.1 dogfooding and publish the Knowledge Entry granularity guideline
