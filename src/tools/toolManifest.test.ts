@@ -35,7 +35,10 @@ test("contributes explicit save and search language model tools", async () => {
     "totonoeKnowledge.registerFromClipboardWithTemplate",
     "totonoeKnowledge.registerSelectionWithAi",
     "totonoeKnowledge.registerSelectionWithTemplate",
+    "totonoeKnowledge.selectRepository",
+    "totonoeKnowledge.showRepository",
+    "totonoeKnowledge.useWorkspaceRepository",
   ]) {
-    assert.ok(commands.has(command), `direct registration command should be contributed: ${command}`);
+    assert.ok(commands.has(command), `command should be contributed: ${command}`);
   }
 });

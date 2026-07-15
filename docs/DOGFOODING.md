@@ -12,13 +12,13 @@
 - GitHubのprivateリポジトリ
 - バックアップ対象になっているローカル専用フォルダー
 
-そのナレッジリポジトリ自体をVS Codeのワークスペースとして開き、`totonoeKnowledge.repositoryPath` を設定します。現時点では先頭ワークスペース内の相対パスだけを受け付けるため、別の開発リポジトリから絶対パスや `..` で指定することはできません。
+開発ワークスペースから `Totonoe Knowledge: Select Knowledge Repository Folder` を実行し、そのナレッジ専用リポジトリを選択します。選択せず、ナレッジリポジトリ自体をワークスペースとして開いて `repositoryPath`を設定する従来方式も使用できます。
 
 ## 実行手順
 
 1. GitHub Actionsの成功したrunから `totonoe-knowledge-vsix-<commit SHA>` artifactを取得する（またはこのリポジトリで `F5`を使用する）
 2. artifactのzipを展開し、VS Codeの `Install from VSIX...` でインストールする
-3. 上記のprivate／社内ワークスペースを開く
+3. 開発ワークスペースを開き、上記のprivate／社内リポジトリを保存先として選択する
 4. 調査を終えるたびにCopy Allまたは選択範囲から登録する
 5. 別の日に、元の言い回しとは異なる検索語で探す
 

@@ -59,6 +59,18 @@
         "title": "Totonoe Knowledge: テンプレートで選択範囲から登録"
       },
       {
+        "command": "totonoeKnowledge.selectRepository",
+        "title": "Totonoe Knowledge: Select Knowledge Repository Folder"
+      },
+      {
+        "command": "totonoeKnowledge.showRepository",
+        "title": "Totonoe Knowledge: Show Knowledge Repository"
+      },
+      {
+        "command": "totonoeKnowledge.useWorkspaceRepository",
+        "title": "Totonoe Knowledge: Use Workspace Repository"
+      },
+      {
         "command": "totonoeKnowledge.search",
         "title": "Totonoe Knowledge: Search"
       },
@@ -207,7 +219,7 @@
         "totonoeKnowledge.repositoryPath": {
           "type": "string",
           "default": "knowledge",
-          "description": "ワークスペースからの相対パスで指定するMarkdownナレッジ保存先"
+          "description": "外部リポジトリを選択していない場合に、ワークスペースからの相対パスで指定するMarkdownナレッジ保存先"
         },
         "totonoeKnowledge.generator": {
           "type": "string",
@@ -235,8 +247,9 @@
   "scripts": {
     "check": "tsc --noEmit",
     "copy:sqlite-wasm": "node -e \"const fs=require('node:fs'); const path=require('node:path'); const source=path.dirname(require.resolve('sql.js/dist/sql-wasm.js')); fs.mkdirSync('dist',{recursive:true}); for(const file of ['sql-wasm.js','sql-wasm.wasm']) fs.copyFileSync(path.join(source,file),path.join('dist',file))\"",
+    "copy:sqlite-wasm:integration": "node -e \"const fs=require('node:fs'); const path=require('node:path'); const source=path.dirname(require.resolve('sql.js/dist/sql-wasm.js')); const target=path.join('.integration-test','suite'); fs.mkdirSync(target,{recursive:true}); for(const file of ['sql-wasm.js','sql-wasm.wasm']) fs.copyFileSync(path.join(source,file),path.join(target,file))\"",
     "compile": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap && npm run copy:sqlite-wasm",
-    "compile:integration": "esbuild ./integration/runTest.ts ./integration/suite/index.ts --bundle --platform=node --format=cjs --external:vscode --external:@vscode/test-electron --outbase=./integration --outdir=./.integration-test --sourcemap",
+    "compile:integration": "esbuild ./integration/runTest.ts ./integration/suite/index.ts --bundle --platform=node --format=cjs --external:vscode --external:@vscode/test-electron --outbase=./integration --outdir=./.integration-test --sourcemap && npm run copy:sqlite-wasm:integration",
     "compile:all": "npm run compile && npm run compile:integration",
     "watch": "npm run copy:sqlite-wasm && esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap --watch",
     "test": "tsx --test src/**/*.test.ts",

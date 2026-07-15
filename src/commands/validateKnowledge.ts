@@ -1,5 +1,9 @@
 import * as vscode from "vscode";
-import { isValidRepositoryPath } from "../knowledge/repositoryPath";
+import { findKnowledgeMarkdownFiles } from "../knowledge/knowledgeFiles";
+import {
+  KnowledgeRepositoryLocator,
+  repositoryRelativePath,
+} from "../knowledge/repositoryLocation";
 import { validateKnowledgeDocuments } from "../validation/knowledgeValidator";
 
 interface LoadedDocument {
@@ -10,27 +14,13 @@ interface LoadedDocument {
 
 export async function validateKnowledgeRepository(
   collection: vscode.DiagnosticCollection,
+  repositoryLocator: KnowledgeRepositoryLocator,
 ): Promise<void> {
-  const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-  if (!root) {
-    void vscode.window.showErrorMessage("ナレッジを検査するワークスペースを開いてください。");
-    return;
-  }
-
-  const repositoryPath = vscode.workspace
-    .getConfiguration("totonoeKnowledge")
-    .get<string>("repositoryPath", "knowledge")
-    .trim();
-  if (!isValidRepositoryPath(repositoryPath)) {
-    void vscode.window.showErrorMessage("repositoryPathにはワークスペース内の相対パスを指定してください。");
-    return;
-  }
-
-  const files = await vscode.workspace.findFiles(
-    new vscode.RelativePattern(root, `${repositoryPath}/**/*.md`),
-  );
+  const location = await repositoryLocator.resolveOrNotify();
+  if (!location) return;
+  const files = await findKnowledgeMarkdownFiles(location.repositoryRoot);
   const documents: LoadedDocument[] = await Promise.all(files.map(async (uri) => ({
-    path: vscode.workspace.asRelativePath(uri),
+    path: repositoryRelativePath(location, uri),
     content: Buffer.from(await vscode.workspace.fs.readFile(uri)).toString("utf8"),
     uri,
   })));

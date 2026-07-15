@@ -9,6 +9,8 @@ const typeDirectories: Record<KnowledgeType, string> = {
   decision: "decisions",
 };
 
+export const knowledgeDirectories = Object.freeze(Object.values(typeDirectories));
+
 export function directoryFor(type: KnowledgeType): string {
   return typeDirectories[type];
 }

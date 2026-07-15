@@ -6,7 +6,10 @@ import { VsCodeLanguageModelGenerator } from "../ai/vsCodeLanguageModelGenerator
 import { renderKnowledge } from "../knowledge/markdown";
 import { createKnowledgeId } from "../knowledge/id";
 import { prepareKnowledgeTarget, saveKnowledgeDraft } from "../knowledge/repository";
-import { isValidRepositoryPath } from "../knowledge/repositoryPath";
+import {
+  KnowledgeRepositoryLocator,
+  repositoryRelativePath,
+} from "../knowledge/repositoryLocation";
 import {
   knowledgeTypes,
   type GeneratedKnowledge,
@@ -48,10 +51,6 @@ async function getSource(kind: SourceKind): Promise<KnowledgeSource | undefined>
     return undefined;
   }
   return { kind, text };
-}
-
-function workspaceRoot(): vscode.Uri | undefined {
-  return vscode.workspace.workspaceFolders?.[0]?.uri;
 }
 
 async function chooseGeneratorMode(configured: GeneratorMode): Promise<SelectedGeneratorMode | undefined> {
@@ -245,13 +244,11 @@ async function openPathBoundDraft(target: vscode.Uri, markdown: string): Promise
 export async function registerKnowledge(
   kind: SourceKind,
   context: vscode.ExtensionContext,
+  repositoryLocator: KnowledgeRepositoryLocator,
   requestedMode?: SelectedGeneratorMode,
 ): Promise<void> {
-  const root = workspaceRoot();
-  if (!root) {
-    void vscode.window.showErrorMessage("ナレッジを保存するワークスペースを開いてください。");
-    return;
-  }
+  const location = await repositoryLocator.resolveOrNotify();
+  if (!location) return;
 
   const source = await getSource(kind);
   if (!source) return;
@@ -276,18 +273,9 @@ export async function registerKnowledge(
     createdAt: now.toISOString(),
   };
 
-  const repositoryPath = vscode.workspace
-    .getConfiguration("totonoeKnowledge")
-    .get<string>("repositoryPath", "knowledge")
-    .trim();
-  if (!isValidRepositoryPath(repositoryPath)) {
-    void vscode.window.showErrorMessage("repositoryPathにはワークスペース内の相対パスを指定してください。");
-    return;
-  }
-
   const markdown = renderKnowledge(draft);
-  const target = await prepareKnowledgeTarget(root, repositoryPath, draft);
-  const relativeTarget = vscode.workspace.asRelativePath(target);
+  const target = await prepareKnowledgeTarget(location.repositoryRoot, draft);
+  const relativeTarget = repositoryRelativePath(location, target);
 
   if (target.scheme === "file") {
     if (!(await confirmPathBoundDraft(markdown))) return;
@@ -307,7 +295,7 @@ export async function registerKnowledge(
   );
   if (action !== "ナレッジとして保存" || !(await confirmLocalSave(document.getText()))) return;
 
-  const savedTarget = await saveKnowledgeDraft(root, repositoryPath, draft, document.getText());
+  const savedTarget = await saveKnowledgeDraft(location.repositoryRoot, draft, document.getText());
   await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(savedTarget), { preview: false });
   void vscode.window.showInformationMessage(`ナレッジを保存しました: ${relativeTarget}`);
 }
