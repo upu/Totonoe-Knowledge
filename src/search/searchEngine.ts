@@ -1,4 +1,5 @@
 import { frontmatterList, frontmatterString, parseFrontmatter } from "../knowledge/frontmatter";
+import { isVersionInRange, parseComparableVersion } from "../knowledge/versioning";
 
 export interface KnowledgeDocument {
   path: string;
@@ -11,6 +12,9 @@ export interface ParsedKnowledgeDocument extends KnowledgeDocument {
   summary: string;
   type: string;
   status: string;
+  appliesFrom: string;
+  appliesTo: string;
+  supersedes: string[];
   keywords: string[];
   body: string;
 }
@@ -18,6 +22,10 @@ export interface ParsedKnowledgeDocument extends KnowledgeDocument {
 export interface KnowledgeSearchResult extends ParsedKnowledgeDocument {
   score: number;
   matchedTerms: string[];
+}
+
+export interface KnowledgeSearchOptions {
+  version?: string;
 }
 
 export function normalizeSearchText(value: string): string {
@@ -66,14 +74,44 @@ export function parseKnowledgeDocument(document: KnowledgeDocument): ParsedKnowl
     summary: frontmatterString(frontmatter, "summary") ?? "",
     type: frontmatterString(frontmatter, "type") ?? "unknown",
     status: frontmatterString(frontmatter, "status") ?? "unknown",
+    appliesFrom: frontmatterString(frontmatter, "applies_from") ?? "",
+    appliesTo: frontmatterString(frontmatter, "applies_to") ?? "",
+    supersedes: frontmatterList(frontmatter, "supersedes") ?? [],
     keywords: frontmatterList(frontmatter, "keywords") ?? [],
     body: frontmatter.body,
   };
 }
 
+export function effectiveKnowledgeDocuments(
+  documents: ParsedKnowledgeDocument[],
+  version: string,
+): ParsedKnowledgeDocument[] {
+  if (!parseComparableVersion(version)) throw new Error(`比較できない対象バージョンです: ${version}`);
+  const byId = new Map(documents.map((document) => [document.id, document]));
+  const applicable = documents.filter((document) =>
+    isVersionInRange(version, document.appliesFrom, document.appliesTo),
+  );
+  const superseded = new Set<string>();
+  const collectSuperseded = (id: string, visited: Set<string>): void => {
+    if (visited.has(id)) return;
+    visited.add(id);
+    superseded.add(id);
+    for (const ancestor of byId.get(id)?.supersedes ?? []) collectSuperseded(ancestor, visited);
+  };
+  for (const document of applicable) {
+    for (const id of document.supersedes) collectSuperseded(id, new Set());
+  }
+  return applicable.filter((document) => !superseded.has(document.id));
+}
+
 export function searchKnowledgeDocuments(
   documents: KnowledgeDocument[],
   query: string,
+  options: KnowledgeSearchOptions = {},
 ): KnowledgeSearchResult[] {
-  return rankKnowledgeDocuments(documents.map(parseKnowledgeDocument), query);
+  const parsed = documents.map(parseKnowledgeDocument);
+  const effective = options.version
+    ? effectiveKnowledgeDocuments(parsed, options.version)
+    : parsed;
+  return rankKnowledgeDocuments(effective, query);
 }

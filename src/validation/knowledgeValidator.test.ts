@@ -9,6 +9,8 @@ title: "Title"
 summary: "Summary"
 type: investigation
 status: active
+applies_from: ""
+applies_to: ""
 keywords: []
 created_at: 2026-07-15T00:00:00.000Z
 updated_at: 2026-07-15T00:00:00.000Z
@@ -77,4 +79,47 @@ test("detects a supersedes cycle", () => {
     { path: "two.md", content: second },
   ]);
   assert.equal(issues.filter((value) => value.code === "supersedes-cycle").length, 2);
+});
+
+test("treats an unknown supersedes target as an integrity error", () => {
+  const content = entry("K-20260715-001").replace(
+    "supersedes: []",
+    "supersedes:\n  - K-20260715-999",
+  );
+  const issue = validateKnowledgeDocuments([{ path: "one.md", content }])
+    .find((value) => value.code === "unknown-reference");
+  assert.equal(issue?.severity, "error");
+  assert.match(issue?.message ?? "", /supersedes/);
+});
+
+test("accepts comparable inclusive version ranges and legacy entries without bounds", () => {
+  const ranged = entry("K-20260715-001")
+    .replace('applies_from: ""', 'applies_from: "RHEL9.1"')
+    .replace('applies_to: ""', 'applies_to: "RHEL9.4"');
+  const legacy = entry("K-20260715-002")
+    .replace('applies_from: ""\n', "")
+    .replace('applies_to: ""\n', "");
+  assert.deepEqual(validateKnowledgeDocuments([
+    { path: "ranged.md", content: ranged },
+    { path: "legacy.md", content: legacy },
+  ]), []);
+});
+
+test("rejects malformed, incompatible, and reversed version ranges", () => {
+  const malformed = entry("K-20260715-001")
+    .replace('applies_from: ""', 'applies_from: "rolling"');
+  const incompatible = entry("K-20260715-002")
+    .replace('applies_from: ""', 'applies_from: "RHEL9"')
+    .replace('applies_to: ""', 'applies_to: "Ubuntu10"');
+  const reversed = entry("K-20260715-003")
+    .replace('applies_from: ""', 'applies_from: "17.2"')
+    .replace('applies_to: ""', 'applies_to: "17.1"');
+  const codes = validateKnowledgeDocuments([
+    { path: "malformed.md", content: malformed },
+    { path: "incompatible.md", content: incompatible },
+    { path: "reversed.md", content: reversed },
+  ]).map((value) => value.code);
+  assert.ok(codes.includes("invalid-version"));
+  assert.ok(codes.includes("incompatible-version-range"));
+  assert.ok(codes.includes("reversed-version-range"));
 });

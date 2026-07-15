@@ -22,3 +22,6 @@
 - Add an explicitly confirmed external repository picker shared by registration, search, validation, and Agent tools
 - Keep external repository URIs machine-local, fail closed when unavailable, and ignore non-knowledge root Markdown
 - Preserve discovery of legacy root Markdown entries that contain a `K-` knowledge ID
+- Add inclusive applicability bounds and target-version search with transitive `supersedes` filtering
+- Validate malformed, incompatible, and reversed version ranges without requiring legacy entry migration
+- Show explicit applicability and replacement relationships in Save Tool confirmation

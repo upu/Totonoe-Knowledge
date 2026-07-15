@@ -50,6 +50,7 @@ export async function run(): Promise<void> {
     "totonoeKnowledge.showRepository",
     "totonoeKnowledge.useWorkspaceRepository",
     "totonoeKnowledge.search",
+    "totonoeKnowledge.searchForVersion",
     "totonoeKnowledge.validateRepository",
     "totonoeKnowledge.rebuildSearchIndex",
   ]) {
@@ -93,6 +94,7 @@ export async function run(): Promise<void> {
       .toString("utf8")
       .replace("K-20260715-120000000-test", "K-20260715-120000000-legacy")
       .replace('title: "Integration test knowledge"', 'title: "Legacy root knowledge"')
+      .replace('status: active', 'status: active\napplies_from: "17.1"\napplies_to: "17.9"')
       .replace('  - "integration-test"', '  - "legacy-root"');
     await vscode.workspace.fs.writeFile(legacyRootEntry, Buffer.from(legacyContent, "utf8"));
     await vscode.workspace.fs.writeFile(
@@ -119,6 +121,16 @@ export async function run(): Promise<void> {
     );
     const search = await searchWorkspaceKnowledge(externalRoot, externalRoot, "legacy-root");
     assert.equal(search.results[0]?.path, "Untitled-1.md");
+    assert.equal(
+      (await searchWorkspaceKnowledge(externalRoot, externalRoot, "legacy-root", "17.0")).results.length,
+      0,
+      "versioned search should exclude entries before applies_from",
+    );
+    assert.equal(
+      (await searchWorkspaceKnowledge(externalRoot, externalRoot, "legacy-root", "17.1")).results[0]?.path,
+      "Untitled-1.md",
+      "versioned search should include the applies_from boundary",
+    );
   } finally {
     await vscode.workspace.fs.delete(externalRoot, { recursive: true, useTrash: false });
   }

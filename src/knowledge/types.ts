@@ -35,6 +35,8 @@ export interface KnowledgeDraft extends GeneratedKnowledge {
   id: string;
   source: string;
   createdAt: string;
+  appliesFrom?: string;
+  appliesTo?: string;
   relatedKnowledgeIds?: string[];
   supersedesKnowledgeIds?: string[];
   sourceReferences?: string[];

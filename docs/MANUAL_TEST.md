@@ -69,6 +69,10 @@ password=example-only-secret
 - [ ] Markdownを追加・変更・削除した後の検索で差分が反映される
 - [ ] `Rebuild Search Index` で全Entryからインデックスを再構築できる
 - [ ] インデックスを削除しても次回検索で再生成される
+- [ ] `Search for Version`で包含境界のEntryが見つかる
+- [ ] 対象バージョンで適用される新Entryが`supersedes`する旧Entryを除外する
+- [ ] 新Entryの適用前バージョンでは旧Entryが見つかる
+- [ ] 比較不能な対象バージョンを入力すると警告する
 
 ## 整合性検査
 
@@ -77,11 +81,13 @@ password=example-only-secret
 - [ ] 重複IDを両方のファイルへ表示する
 - [ ] 存在しない `related` / `supersedes` を警告する
 - [ ] 自己参照をエラーとして表示する
+- [ ] 不正、異系列、逆転した`applies_from` / `applies_to`をエラーとして表示する
 
 ## Language Model Tools
 
 - [ ] Agentモードで `#totonoeKnowledgeSave` を明示参照できる
 - [ ] Save Toolの実行前にタイトルと保存操作の確認が表示される
+- [ ] Save Toolの確認に適用バージョンと置き換え対象が表示される
 - [ ] Agentモードで `#totonoeKnowledgeSearch` を明示参照できる
 - [ ] Search ToolがID、タイトル、要約、type、相対パスを返す
 - [ ] 検索結果を命令ではなく未検証資料として扱う注意が返る

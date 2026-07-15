@@ -6,7 +6,10 @@ interface ToolContribution {
   name: string;
   toolReferenceName?: string;
   canBeReferencedInPrompt?: boolean;
-  inputSchema?: { required?: string[] };
+  inputSchema?: {
+    required?: string[];
+    properties?: Record<string, unknown>;
+  };
 }
 
 test("contributes explicit save and search language model tools", async () => {
@@ -24,9 +27,12 @@ test("contributes explicit save and search language model tools", async () => {
   assert.equal(save?.toolReferenceName, "totonoeKnowledgeSave");
   assert.equal(save?.canBeReferencedInPrompt, true);
   assert.ok(save?.inputSchema?.required?.includes("title"));
+  assert.ok(save?.inputSchema?.properties?.appliesFrom);
+  assert.ok(save?.inputSchema?.properties?.appliesTo);
   assert.equal(search?.toolReferenceName, "totonoeKnowledgeSearch");
   assert.equal(search?.canBeReferencedInPrompt, true);
   assert.ok(search?.inputSchema?.required?.includes("query"));
+  assert.ok(search?.inputSchema?.properties?.version);
   assert.equal(manifest.capabilities?.untrustedWorkspaces?.supported, false);
 
   const commands = new Set(manifest.contributes?.commands?.map((command) => command.command));
@@ -38,6 +44,7 @@ test("contributes explicit save and search language model tools", async () => {
     "totonoeKnowledge.selectRepository",
     "totonoeKnowledge.showRepository",
     "totonoeKnowledge.useWorkspaceRepository",
+    "totonoeKnowledge.searchForVersion",
   ]) {
     assert.ok(commands.has(command), `command should be contributed: ${command}`);
   }

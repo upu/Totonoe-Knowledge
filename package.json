@@ -75,6 +75,10 @@
         "title": "Totonoe Knowledge: Search"
       },
       {
+        "command": "totonoeKnowledge.searchForVersion",
+        "title": "Totonoe Knowledge: Search for Version"
+      },
+      {
         "command": "totonoeKnowledge.validateRepository",
         "title": "Totonoe Knowledge: Validate Repository"
       },
@@ -91,7 +95,7 @@
         "canBeReferencedInPrompt": true,
         "icon": "$(book)",
         "userDescription": "会話で整理した内容を確認付きでMarkdownナレッジとして保存します。",
-        "modelDescription": "Save a structured internal project knowledge entry as Markdown. Use when the user explicitly asks to record a conclusion, investigation, procedure, decision, specification, change, or troubleshooting result. The tool always asks the user for confirmation before writing. Do not use it for temporary notes or when required facts are still unknown.",
+        "modelDescription": "Save a structured internal project knowledge entry as Markdown. Use when the user explicitly asks to record a conclusion, investigation, procedure, decision, specification, change, or troubleshooting result. The tool always asks the user for confirmation before writing. Do not use it for temporary notes or when required facts are still unknown. Never infer appliesFrom, appliesTo, or supersedesKnowledgeIds; include them only when the user or cited evidence states them explicitly.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -147,6 +151,14 @@
                 "type": "string"
               }
             },
+            "appliesFrom": {
+              "type": "string",
+              "description": "Inclusive first applicable version, only when explicitly stated by the user or evidence; omit rather than infer"
+            },
+            "appliesTo": {
+              "type": "string",
+              "description": "Inclusive last applicable version, only when explicitly stated by the user or evidence; omit rather than infer"
+            },
             "relatedKnowledgeIds": {
               "type": "array",
               "items": {
@@ -159,7 +171,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Older knowledge IDs explicitly replaced by this entry; omit rather than guess"
+              "description": "Older knowledge IDs explicitly replaced by this entry; only use when stated by the user or cited evidence, and omit rather than infer"
             },
             "sourceReferences": {
               "type": "array",
@@ -204,6 +216,10 @@
               "minimum": 1,
               "maximum": 10,
               "default": 5
+            },
+            "version": {
+              "type": "string",
+              "description": "Optional target version used to keep only applicable, non-superseded entries, for example 17.1 or RHEL9.2"
             }
           },
           "required": [

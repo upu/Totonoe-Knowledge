@@ -10,6 +10,8 @@ const draft: KnowledgeDraft = {
   type: "investigation",
   keywords: ["PTY", "stty"],
   createdAt: "2026-07-15T00:00:00.000Z",
+  appliesFrom: "17.1",
+  appliesTo: "17.9",
   source: "# 元の見出し\n確認した入力",
   relatedKnowledgeIds: ["K-20260714-001"],
   supersedesKnowledgeIds: ["K-20260713-001"],
@@ -27,6 +29,8 @@ const draft: KnowledgeDraft = {
 test("renders generated sections and quotes the untrusted source", () => {
   const markdown = renderKnowledge(draft);
   assert.match(markdown, /title: "PTY幅の調査"/);
+  assert.match(markdown, /applies_from: "17.1"/);
+  assert.match(markdown, /applies_to: "17.9"/);
   assert.match(markdown, /# 結論\n\nsttyを使用する。/);
   assert.match(markdown, /related:\n  - "K-20260714-001"/);
   assert.match(markdown, /supersedes:\n  - "K-20260713-001"/);
