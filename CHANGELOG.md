@@ -33,3 +33,4 @@
 - Rename direct offline registration commands so their zero-AI behavior is clear
 - Discover unspaced Japanese natural-language queries through bounded 2/3-gram candidates and Markdown reranking
 - Add the 12 v0.1 dogfooding searches as SQLite/direct-scan parity regressions
+- Send valid prepared knowledge directly to the Markdown preview without repeated metadata prompts

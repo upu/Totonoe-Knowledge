@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { KnowledgeGenerator } from "../ai/knowledgeGenerator";
+import { requiresMetadataInput, type GenerationOrigin } from "../ai/generationOrigin";
 import { orderModelsByPreviousSelection } from "../ai/modelSelection";
 import { TemplateOnlyGenerator } from "../ai/templateOnlyGenerator";
 import { VsCodeLanguageModelGenerator } from "../ai/vsCodeLanguageModelGenerator";
@@ -29,7 +29,7 @@ type SelectedGeneratorMode = Exclude<GeneratorMode, "ask">;
 
 interface GenerationResult {
   generated: GeneratedKnowledge;
-  mode: SelectedGeneratorMode;
+  origin: GenerationOrigin;
 }
 
 const previousModelStorageKey = "totonoeKnowledge.previousLanguageModelId";
@@ -125,7 +125,7 @@ async function generateKnowledge(
   mode: SelectedGeneratorMode,
   context: vscode.ExtensionContext,
 ): Promise<GenerationResult | undefined> {
-  const generator: KnowledgeGenerator = new TemplateOnlyGenerator();
+  const generator = new TemplateOnlyGenerator();
 
   if (mode === "languageModel") {
     const sendChoice = await confirmExternalSend(source);
@@ -139,7 +139,7 @@ async function generateKnowledge(
             { location: vscode.ProgressLocation.Notification, title: `${model.name}でナレッジ案を生成中`, cancellable: true },
             async (_progress, token) => new VsCodeLanguageModelGenerator(model, token).generate(source),
           );
-          return { generated, mode: "languageModel" };
+          return { generated, origin: "languageModel" };
         } catch (error) {
           const message = error instanceof vscode.LanguageModelError
             ? `AIモデルを利用できませんでした（${error.code}）。`
@@ -152,7 +152,8 @@ async function generateKnowledge(
   }
 
   try {
-    return { generated: await generator.generate(source), mode: "template" };
+    const generated = await generator.generateWithOrigin(source);
+    return generated;
   } catch (error) {
     void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
     return undefined;
@@ -265,9 +266,9 @@ export async function registerKnowledge(
   if (!mode) return;
   const result = await generateKnowledge(source, mode, context);
   if (!result) return;
-  const edited = result.mode === "languageModel"
-    ? result.generated
-    : await editMetadata(result.generated);
+  const edited = requiresMetadataInput(result.origin)
+    ? await editMetadata(result.generated)
+    : result.generated;
   if (!edited) return;
 
   const now = new Date();
