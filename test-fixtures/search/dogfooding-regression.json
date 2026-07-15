@@ -1,0 +1,30 @@
+{
+  "cases": [
+    { "query": "DBが消えても復旧できる保存方式", "expectedId": "DOGFOOD-01", "maxRank": 2 },
+    { "query": "チャットをあとで探せる形にする流れ", "expectedId": "DOGFOOD-02", "maxRank": 1 },
+    { "query": "Untitledやモデル選択が使いづらい", "expectedId": "DOGFOOD-03", "maxRank": 1 },
+    { "query": "別cloneへ絶対pathで保存したい", "expectedId": "DOGFOOD-04", "maxRank": 4 },
+    { "query": "Ctrl+Sだけで分類別フォルダーへ保存", "expectedId": "DOGFOOD-05", "maxRank": 1 },
+    { "query": "日本語の途中の文字から探す", "expectedId": "DOGFOOD-06", "maxRank": 1 },
+    { "query": "Agentに過去情報を渡す明示ツール", "expectedId": "DOGFOOD-07", "maxRank": 1 },
+    { "query": "社外秘がモデルやログへ出ない条件", "expectedId": "DOGFOOD-08", "maxRank": 2 },
+    { "query": "17.1で古い仕様を検索結果から外す", "expectedId": "DOGFOOD-09", "maxRank": 1 },
+    { "query": "ナレッジをレビューしてチーム共有", "expectedId": "DOGFOOD-10", "maxRank": 1 },
+    { "query": "tokenのaudienceとproject ACL", "expectedId": "DOGFOOD-11", "maxRank": 1 },
+    { "query": "DBなしで読める災害復旧データ", "expectedId": "DOGFOOD-12", "maxRank": 1 }
+  ],
+  "entries": [
+    { "id": "DOGFOOD-01", "title": "Markdownを正本にする", "summary": "検索DBは消失しても再生成できる派生物として扱う", "keywords": ["Markdown", "SQLite", "復旧"], "body": "GitとMarkdownを保存の正本にし、indexを再構築する。" },
+    { "id": "DOGFOOD-02", "title": "v0.1の登録・保存・検索フロー", "summary": "会話をMarkdownへ残して別の日に再発見する", "keywords": ["登録フロー", "検索"], "body": "調べたことを無理なく残し、あとで見つけられるかを確かめる。" },
+    { "id": "DOGFOOD-03", "title": "初回dogfoodingの登録UX", "summary": "Untitled保存先とAIモデル一覧が迷いどころだった", "keywords": ["Untitled", "モデル選択"], "body": "利用時の使いづらさを確認する。" },
+    { "id": "DOGFOOD-04", "title": "外部Knowledge Repositoryを選択する", "summary": "別cloneはfolder pickerで明示選択する", "keywords": ["external repository", "clone", "path"], "body": "設定へ絶対pathを書かず、選んだ保存先を利用する。" },
+    { "id": "DOGFOOD-05", "title": "保存pathを自動決定する", "summary": "type別directoryとfilenameを先に決める", "keywords": ["Ctrl+S", "保存path"], "body": "path付きプレビューから正しい分類先へ保存する。" },
+    { "id": "DOGFOOD-06", "title": "SQLite FTS候補抽出", "summary": "日本語部分一致をn-gramで候補抽出する", "keywords": ["SQLite FTS", "日本語検索"], "body": "英数字や日本語の途中一致を維持する。" },
+    { "id": "DOGFOOD-07", "title": "Agent向けSave/Search Tool", "summary": "Agentが構造化案を明示Toolへ渡す", "keywords": ["Agent", "Search Tool"], "body": "過去のproject情報を検索して参照として返す。" },
+    { "id": "DOGFOOD-08", "title": "機密情報の境界", "summary": "保存先、AI送信、index、Git公開範囲を分けて管理する", "keywords": ["社外秘", "モデル", "ログ"], "body": "機密内容が外部へ出ない条件を確認する。" },
+    { "id": "DOGFOOD-09", "title": "versionとsupersedes", "summary": "対象versionで有効なEntryだけを検索する", "keywords": ["17.1", "古い仕様"], "body": "置き換えられた旧Entryを検索結果から除外する。" },
+    { "id": "DOGFOOD-10", "title": "GitとPull Requestのチーム運用", "summary": "team Knowledgeをtopic branchとreviewで共有する", "keywords": ["レビュー", "チーム共有"], "body": "ナレッジの差分をPull Requestで確認する。" },
+    { "id": "DOGFOOD-11", "title": "Remote HTTP Repositoryのsecurity", "summary": "OAuth tokenとproject権限をrequestごとに検証する", "keywords": ["audience", "project ACL"], "body": "tokenのaudience、scope、membershipを評価する。" },
+    { "id": "DOGFOOD-12", "title": "可読backupとrestore", "summary": "DBに依存しないMarkdown archiveを災害復旧へ使う", "keywords": ["backup", "restore"], "body": "人が通常fileとして読めるデータを別障害domainへ保存する。" }
+  ]
+}

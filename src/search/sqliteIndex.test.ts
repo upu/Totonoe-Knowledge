@@ -60,6 +60,8 @@ test("creates safe FTS queries for Japanese, ASCII, and punctuation", () => {
   assert.equal(createFtsQuery("PTY 端末幅"), '("pty") OR ("端末幅")');
   assert.equal(createFtsQuery("Kubernetes"), '("kub" AND "ube" AND "ber" AND "ern" AND "rne" AND "net" AND "ete" AND "tes")');
   assert.equal(createFtsQuery("ERR-123"), '("err" AND "123")');
+  assert.match(createFtsQuery("DBが消えても復旧できる保存方式") ?? "", /\("復旧"\)/);
+  assert.match(createFtsQuery("DBが消えても復旧できる保存方式") ?? "", /\("保存"\)/);
   assert.equal(createFtsQuery("  !!!  "), undefined);
   assert.equal(createFtsQuery("🔐"), undefined);
 });
