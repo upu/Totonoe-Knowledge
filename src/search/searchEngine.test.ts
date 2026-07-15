@@ -42,6 +42,9 @@ test("parses quoted frontmatter and keyword lists", () => {
   assert.equal(parsed.type, "investigation");
   assert.equal(parsed.status, "active");
   assert.equal(parsed.summary, "PTYの端末幅をsttyで変更する");
+  assert.equal(parsed.appliesFrom, "");
+  assert.equal(parsed.appliesTo, "");
+  assert.deepEqual(parsed.supersedes, []);
   assert.deepEqual(parsed.keywords, ["SSH", "PTY", "stty"]);
   assert.match(parsed.body, /COLUMNS/);
 });
@@ -62,4 +65,79 @@ test("normalizes Japanese and latin text case-insensitively", () => {
 test("returns no result for an empty or unmatched query", () => {
   assert.deepEqual(searchKnowledgeDocuments(documents, "  "), []);
   assert.deepEqual(searchKnowledgeDocuments(documents, "Kubernetes"), []);
+});
+
+test("filters inclusive ranges and removes transitively superseded entries for a target version", () => {
+  const versionedDocuments = [
+    {
+      path: "old.md",
+      content: `---
+id: K-OLD
+title: "Legacy transport setting"
+summary: "transport value A"
+type: specification
+status: active
+applies_from: "17.0"
+applies_to: ""
+keywords: []
+supersedes: []
+---
+# 結論
+Use A.`,
+    },
+    {
+      path: "middle.md",
+      content: `---
+id: K-MIDDLE
+title: "Intermediate setting"
+summary: "transport value B"
+type: change
+status: active
+applies_from: "17.1"
+applies_to: ""
+keywords: []
+supersedes:
+  - K-OLD
+---
+# 結論
+Use B.`,
+    },
+    {
+      path: "current.md",
+      content: `---
+id: K-CURRENT
+title: "Current setting"
+summary: "transport value C"
+type: change
+status: active
+applies_from: "17.2"
+applies_to: ""
+keywords: []
+supersedes:
+  - K-MIDDLE
+---
+# 結論
+Use C.`,
+    },
+  ];
+
+  assert.deepEqual(
+    searchKnowledgeDocuments(versionedDocuments, "transport", { version: "17.0" }).map((result) => result.id),
+    ["K-OLD"],
+  );
+  assert.deepEqual(
+    searchKnowledgeDocuments(versionedDocuments, "transport", { version: "17.1" }).map((result) => result.id),
+    ["K-MIDDLE"],
+  );
+  assert.deepEqual(
+    searchKnowledgeDocuments(versionedDocuments, "transport", { version: "17.2" }).map((result) => result.id),
+    ["K-CURRENT"],
+  );
+});
+
+test("rejects a non-comparable target version", () => {
+  assert.throws(
+    () => searchKnowledgeDocuments(documents, "SSH", { version: "rolling" }),
+    /比較できない対象バージョン/,
+  );
 });

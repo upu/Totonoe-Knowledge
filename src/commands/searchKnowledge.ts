@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { KnowledgeRepositoryLocator } from "../knowledge/repositoryLocation";
+import { describeVersionRange, parseComparableVersion } from "../knowledge/versioning";
 import { searchWorkspaceKnowledge } from "../search/workspaceSearch";
 
 interface SearchItem extends vscode.QuickPickItem {
@@ -7,9 +8,24 @@ interface SearchItem extends vscode.QuickPickItem {
   score: number;
 }
 
-export async function searchKnowledge(repositoryLocator: KnowledgeRepositoryLocator): Promise<void> {
+export async function searchKnowledge(
+  repositoryLocator: KnowledgeRepositoryLocator,
+  promptForVersion = false,
+): Promise<void> {
   const location = await repositoryLocator.resolveOrNotify();
   if (!location) return;
+
+  const version = promptForVersion
+    ? await vscode.window.showInputBox({
+        title: "対象バージョン",
+        prompt: "このバージョンで有効なナレッジだけを検索（例: 17.1、RHEL9.2）",
+        ignoreFocusOut: true,
+        validateInput: (value) => value.trim() && !parseComparableVersion(value)
+          ? "比較可能なバージョンを入力してください（例: 17.1、RHEL9.2）"
+          : undefined,
+      })
+    : undefined;
+  if (promptForVersion && !version?.trim()) return;
 
   const query = await vscode.window.showInputBox({
     title: "Totonoe Knowledge Search",
@@ -20,7 +36,12 @@ export async function searchKnowledge(repositoryLocator: KnowledgeRepositoryLoca
 
   const search = await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Window, title: "Totonoe Knowledgeを検索中" },
-    () => searchWorkspaceKnowledge(location.repositoryRoot, location.indexRoot, query.trim()),
+    () => searchWorkspaceKnowledge(
+      location.repositoryRoot,
+      location.indexRoot,
+      query.trim(),
+      version?.trim(),
+    ),
   );
   if (search.indexError) {
     void vscode.window.showWarningMessage(
@@ -31,12 +52,12 @@ export async function searchKnowledge(repositoryLocator: KnowledgeRepositoryLoca
   const items: SearchItem[] = search.results.map((result) => ({
     label: result.title,
     description: result.summary,
-    detail: `${result.type} · ${result.status} · score ${result.score} · ${result.path}`,
+    detail: `${result.type} · ${result.status} · ${describeVersionRange(result.appliesFrom, result.appliesTo)} · score ${result.score} · ${result.path}`,
     uri: vscode.Uri.joinPath(location.repositoryRoot, ...result.path.split("/")),
     score: result.score,
   }));
   const selected = await vscode.window.showQuickPick(items, {
-    title: `検索結果: ${query}`,
+    title: version ? `検索結果: ${query}（${version.trim()}）` : `検索結果: ${query}`,
     placeHolder: items.length ? `${items.length}件見つかりました` : "一致するナレッジはありません",
     matchOnDescription: true,
     matchOnDetail: true,

@@ -115,8 +115,15 @@ export async function searchWorkspaceKnowledge(
   repositoryRoot: vscode.Uri,
   indexRoot: vscode.Uri,
   query: string,
+  version?: string,
 ): Promise<WorkspaceSearchResult> {
   const sources = await collectSources(repositoryRoot);
+  if (version) {
+    return {
+      results: searchKnowledgeDocuments(await readDocuments(sources), query, { version }),
+      backend: "scan",
+    };
+  }
   if (!createFtsQuery(query)) {
     return {
       results: searchKnowledgeDocuments(await readDocuments(sources), query),

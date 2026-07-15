@@ -1,5 +1,6 @@
 import { frontmatterList, frontmatterString, parseFrontmatter } from "../knowledge/frontmatter";
 import { knowledgeTypes, type KnowledgeType } from "../knowledge/types";
+import { compareVersionStrings, parseComparableVersion } from "../knowledge/versioning";
 
 export interface ValidationDocument {
   path: string;
@@ -112,6 +113,55 @@ export function validateKnowledgeDocuments(
       }
     }
 
+    const versionValues = new Map<string, string>();
+    for (const field of ["applies_from", "applies_to"]) {
+      if (!Object.hasOwn(parsed.values, field)) continue;
+      const value = frontmatterString(parsed, field);
+      if (value === undefined) {
+        issues.push(issue(
+          document,
+          parsed.keyLines[field] ?? 1,
+          "error",
+          "invalid-version",
+          `${field} は文字列で指定してください。`,
+        ));
+        continue;
+      }
+      if (value.trim() && !parseComparableVersion(value)) {
+        issues.push(issue(
+          document,
+          parsed.keyLines[field],
+          "error",
+          "invalid-version",
+          `${field} は比較可能な版表記ではありません: ${value}`,
+        ));
+        continue;
+      }
+      versionValues.set(field, value.trim());
+    }
+    const appliesFrom = versionValues.get("applies_from");
+    const appliesTo = versionValues.get("applies_to");
+    if (appliesFrom && appliesTo) {
+      const comparison = compareVersionStrings(appliesFrom, appliesTo);
+      if (comparison === undefined) {
+        issues.push(issue(
+          document,
+          parsed.keyLines.applies_to ?? 1,
+          "error",
+          "incompatible-version-range",
+          `applies_fromとapplies_toの製品系列が一致しません: ${appliesFrom} / ${appliesTo}`,
+        ));
+      } else if (comparison > 0) {
+        issues.push(issue(
+          document,
+          parsed.keyLines.applies_to ?? 1,
+          "error",
+          "reversed-version-range",
+          `applies_fromがapplies_toより後です: ${appliesFrom} / ${appliesTo}`,
+        ));
+      }
+    }
+
     const id = frontmatterString(parsed, "id")?.trim();
     if (id && !/^K-\d{8}-[A-Za-z0-9-]+$/.test(id)) {
       issues.push(issue(document, parsed.keyLines.id, "warning", "nonstandard-id", `標準形式ではないIDです: ${id}`));
@@ -153,7 +203,13 @@ export function validateKnowledgeDocuments(
         if (reference === entry.id) {
           issues.push(issue(document, line, "error", "self-reference", `${field} が自分自身 ${reference} を参照しています。`));
         } else if (!knownIds.has(reference)) {
-          issues.push(issue(document, line, "warning", "unknown-reference", `${field} の参照先 ${reference} が見つかりません。`));
+          issues.push(issue(
+            document,
+            line,
+            field === "supersedes" ? "error" : "warning",
+            "unknown-reference",
+            `${field} の参照先 ${reference} が見つかりません。`,
+          ));
         }
       }
       if (new Set(references).size !== references.length) {

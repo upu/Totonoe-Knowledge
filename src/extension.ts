@@ -40,6 +40,9 @@ export function activate(context: vscode.ExtensionContext): void {
       repositoryLocator.useWorkspaceRepository(),
     ),
     vscode.commands.registerCommand("totonoeKnowledge.search", () => searchKnowledge(repositoryLocator)),
+    vscode.commands.registerCommand("totonoeKnowledge.searchForVersion", () =>
+      searchKnowledge(repositoryLocator, true),
+    ),
     vscode.commands.registerCommand("totonoeKnowledge.rebuildSearchIndex", () =>
       rebuildSearchIndex(repositoryLocator),
     ),

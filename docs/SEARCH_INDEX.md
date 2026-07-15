@@ -31,6 +31,8 @@ Quick PickまたはLanguage Model Toolへ返却
 
 SQLiteを利用できない場合は全Markdownの直接検索へフォールバックします。
 
+対象バージョン検索では、検索語に一致しないEntryも含めて`supersedes`関係を評価する必要があるため、現時点では全Markdownを直接読みます。
+
 ## 保存内容と機密性
 
 インデックスにはMarkdown原文を保存しません。ただし、相対パスと検索用n-gramは元の語句を推測できる派生情報です。元ナレッジと同じアクセス制御を適用し、GitやCI artifactへ含めないでください。

@@ -55,6 +55,8 @@ title: ${yamlString(draft.title)}
 summary: ${yamlString(draft.summary)}
 type: ${draft.type}
 status: active
+applies_from: ${yamlString(draft.appliesFrom ?? "")}
+applies_to: ${yamlString(draft.appliesTo ?? "")}
 ${yamlList("keywords", draft.keywords)}
 created_at: ${draft.createdAt}
 updated_at: ${draft.createdAt}
