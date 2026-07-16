@@ -251,6 +251,36 @@
           "default": "knowledge",
           "description": "外部リポジトリを選択していない場合に、ワークスペースからの相対パスで指定するMarkdownナレッジ保存先"
         },
+        "totonoeKnowledge.embedding.provider": {
+          "type": "string",
+          "enum": [
+            "disabled",
+            "ollama"
+          ],
+          "enumDescriptions": [
+            "意味検索を無効にし、全文・メタデータ検索だけを使用します",
+            "ローカルの Ollama /api/embed を使用してハイブリッド検索します"
+          ],
+          "default": "disabled",
+          "description": "意味検索に使用する Embedding Provider。明示的に ollama を選ぶまでナレッジ本文は送信されません"
+        },
+        "totonoeKnowledge.embedding.ollama.endpoint": {
+          "type": "string",
+          "default": "http://127.0.0.1:11434",
+          "description": "Ollama のローカル URL。安全のため HTTP の localhost、127.0.0.1、または ::1 のみ使用できます"
+        },
+        "totonoeKnowledge.embedding.ollama.model": {
+          "type": "string",
+          "default": "embeddinggemma",
+          "description": "Ollama で事前に取得しておく Embedding モデル名"
+        },
+        "totonoeKnowledge.embedding.minimumSimilarity": {
+          "type": "number",
+          "default": 0.45,
+          "minimum": -1,
+          "exclusiveMaximum": 1,
+          "description": "意味検索候補として採用するコサイン類似度の下限"
+        },
         "totonoeKnowledge.generator": {
           "type": "string",
           "enum": [

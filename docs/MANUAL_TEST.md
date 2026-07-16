@@ -75,6 +75,13 @@ password=example-only-secret
 - [ ] Markdownを追加・変更・削除した後の検索で差分が反映される
 - [ ] `Rebuild Search Index` で全Entryからインデックスを再構築できる
 - [ ] インデックスを削除しても次回検索で再生成される
+- [ ] `totonoeKnowledge.embedding.provider` の初期値が `disabled` であり、Ollamaへ通信しない
+- [ ] Ollamaで `embeddinggemma` を利用可能にし、providerを `ollama` にすると `.totonoe/vectors/index.json` が作られる
+- [ ] 言い換え検索で全文検索だけでは見つからないEntryがハイブリッド検索結果へ現れる
+- [ ] Quick PickとSearch Toolに全文・metadata・意味のscore理由とproviderが表示される
+- [ ] Ollamaを停止すると警告後に全文検索へ切り替わり、従来の検索結果が返る
+- [ ] endpointへLAN・外部ホストまたはHTTPSを設定すると拒否され、本文が送信されない
+- [ ] Markdownを変更すると該当Entryのベクトルだけが再生成され、キャッシュ内にMarkdown原文がない
 - [ ] `Search for Version`で包含境界のEntryが見つかる
 - [ ] 対象バージョンで適用される新Entryが`supersedes`する旧Entryを除外する
 - [ ] 新Entryの適用前バージョンでは旧Entryが見つかる
