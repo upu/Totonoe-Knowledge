@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Add an exchangeable Embedding Provider with an explicit, loopback-only Ollama implementation
+- Add a disposable incremental vector index that stores normalized vectors without Markdown source text
+- Combine full-text, metadata, and semantic scores while preserving exact error-code matches
+- Show score components and provider details for ranking diagnostics
+- Fall back to existing lexical search when semantic search is disabled or unavailable
+- Keep all 12 v0.1 dogfooding queries as lexical and SQLite parity regressions
+
 ## 0.1.0 - 2026-07-15
 
 - Add clipboard and selection-based knowledge registration

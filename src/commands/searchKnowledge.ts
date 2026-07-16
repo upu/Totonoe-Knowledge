@@ -48,11 +48,16 @@ export async function searchKnowledge(
       `SQLite検索インデックスを利用できないため直接検索しました: ${search.indexError?.message ?? "不明なエラー"}`,
     );
   }
+  if (search.embeddingError) {
+    void vscode.window.showWarningMessage(
+      `意味検索を利用できなかったため、全文検索へ切り替えました: ${search.embeddingError.message}`,
+    );
+  }
 
   const items: SearchItem[] = search.results.map((result) => ({
     label: result.title,
     description: result.summary,
-    detail: `${result.type} · ${result.status} · ${describeVersionRange(result.appliesFrom, result.appliesTo)} · score ${result.score} · ${result.path}`,
+    detail: `${result.type} · ${result.status} · ${describeVersionRange(result.appliesFrom, result.appliesTo)} · ${search.backend} score ${result.score.toFixed(2)} · ${result.scoreBreakdown.reasons.join(" / ")} · ${result.path}`,
     uri: vscode.Uri.joinPath(location.repositoryRoot, ...result.path.split("/")),
     score: result.score,
   }));

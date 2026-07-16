@@ -19,6 +19,7 @@ test("contributes explicit save and search language model tools", async () => {
       commands?: Array<{ command: string; title: string }>;
       menus?: { "editor/title"?: Array<{ command: string; when?: string }> };
       languageModelTools?: ToolContribution[];
+      configuration?: { properties?: Record<string, { default?: unknown }> };
     };
   };
   const tools = manifest.contributes?.languageModelTools ?? [];
@@ -35,6 +36,11 @@ test("contributes explicit save and search language model tools", async () => {
   assert.ok(search?.inputSchema?.required?.includes("query"));
   assert.ok(search?.inputSchema?.properties?.version);
   assert.equal(manifest.capabilities?.untrustedWorkspaces?.supported, false);
+  const settings = manifest.contributes?.configuration?.properties ?? {};
+  assert.equal(settings["totonoeKnowledge.embedding.provider"]?.default, "disabled");
+  assert.equal(settings["totonoeKnowledge.embedding.ollama.endpoint"]?.default, "http://127.0.0.1:11434");
+  assert.equal(settings["totonoeKnowledge.embedding.ollama.model"]?.default, "embeddinggemma");
+  assert.equal(settings["totonoeKnowledge.embedding.minimumSimilarity"]?.default, 0.45);
 
   const commands = new Set(manifest.contributes?.commands?.map((command) => command.command));
   for (const command of [
