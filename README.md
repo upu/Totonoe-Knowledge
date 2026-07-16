@@ -16,7 +16,7 @@
 - 機能のソースコードと、利用者が扱う機密ナレッジを分離する
 - AIなしでも登録・検索できる状態を維持する
 
-Entryの分割・統合やtype選択は [Knowledge Entryの粒度ガイドライン](docs/KNOWLEDGE_GRANULARITY.md) を参照してください。
+Entryの分割・統合やtype選択は [Knowledge Entryの粒度ガイドライン](docs/KNOWLEDGE_GRANULARITY.md) を参照してください。粒ナレッジと累積版（Current View）の整理・矛盾検出の設計は [docs/KNOWLEDGE_CURATION.md](docs/KNOWLEDGE_CURATION.md)、自動検索・受信箱によるエージェント連携の設計は [docs/AGENT_INTEGRATION.md](docs/AGENT_INTEGRATION.md) を参照してください。
 
 ## 機能
 
