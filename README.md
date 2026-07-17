@@ -18,6 +18,19 @@
 
 Entryの分割・統合やtype選択は [Knowledge Entryの粒度ガイドライン](docs/KNOWLEDGE_GRANULARITY.md) を参照してください。粒ナレッジと累積版（Current View）の整理・矛盾検出の設計は [docs/KNOWLEDGE_CURATION.md](docs/KNOWLEDGE_CURATION.md)、自動検索・受信箱によるエージェント連携の設計は [docs/AGENT_INTEGRATION.md](docs/AGENT_INTEGRATION.md) を参照してください。
 
+## インストール後の初期設定
+
+DBを手動で作成する必要はありません。インストールしただけではファイルを作成せず、必要になった時点で次のように自動作成します。
+
+- 初回登録時: 既定では、開いているワークスペース内に `knowledge/<種別>/` を作成してMarkdownを保存
+- 初回の通常検索時: ワークスペース直下の `.totonoe/index.sqlite` を自動作成し、以後の検索前にMarkdownの変更を反映
+
+利用開始時は、保存先にする信頼済みワークスペースをVS Codeで開くだけです。既定の保存先 `knowledge` を使う場合、設定変更は必要ありません。そのまま `Totonoe Knowledge: Register from Clipboard`、`Register Selection`、または `Search` を実行できます。
+
+別の場所にある既存のナレッジ専用フォルダーを使う場合だけ、`Totonoe Knowledge: Select Knowledge Repository Folder` で選択してください。この場合は、選択したフォルダー直下に種別ディレクトリと `.totonoe/index.sqlite` が必要に応じて作られます。
+
+SQLiteはMarkdownを高速に検索するための再生成可能な派生データです。事前準備やバックアップは不要で、削除・破損した場合も次回検索または `Totonoe Knowledge: Rebuild Search Index` でMarkdownから作り直せます。意味検索用のOllamaも任意で、初期状態では無効です。
+
 ## 機能
 
 コマンドパレットから次のコマンドを実行できます。
