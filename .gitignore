@@ -8,3 +8,4 @@ dist/
 **/.totonoe/index.sqlite
 **/.totonoe/index.sqlite.*.tmp
 .totonoe/vectors/
+inbox/
