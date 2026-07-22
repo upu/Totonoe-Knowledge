@@ -13,6 +13,17 @@
     { "query": "tokenのaudienceとproject ACL", "expectedId": "DOGFOOD-11", "maxRank": 1 },
     { "query": "DBなしで読める災害復旧データ", "expectedId": "DOGFOOD-12", "maxRank": 1 }
   ],
+  "semanticCases": [
+    {
+      "query": "ボットの発言をすぐ正式記録にせず、担当者が内容を認めてから採用したい",
+      "expectedId": "DOGFOOD-13",
+      "maxRank": 1,
+      "similarities": {
+        "DOGFOOD-13": 0.3839,
+        "DOGFOOD-02": 0.3379
+      }
+    }
+  ],
   "entries": [
     { "id": "DOGFOOD-01", "title": "Markdownを正本にする", "summary": "検索DBは消失しても再生成できる派生物として扱う", "keywords": ["Markdown", "SQLite", "復旧"], "body": "GitとMarkdownを保存の正本にし、indexを再構築する。" },
     { "id": "DOGFOOD-02", "title": "v0.1の登録・保存・検索フロー", "summary": "会話をMarkdownへ残して別の日に再発見する", "keywords": ["登録フロー", "検索"], "body": "調べたことを無理なく残し、あとで見つけられるかを確かめる。" },
@@ -25,6 +36,7 @@
     { "id": "DOGFOOD-09", "title": "versionとsupersedes", "summary": "対象versionで有効なEntryだけを検索する", "keywords": ["17.1", "古い仕様"], "body": "置き換えられた旧Entryを検索結果から除外する。" },
     { "id": "DOGFOOD-10", "title": "GitとPull Requestのチーム運用", "summary": "team Knowledgeをtopic branchとreviewで共有する", "keywords": ["レビュー", "チーム共有"], "body": "ナレッジの差分をPull Requestで確認する。" },
     { "id": "DOGFOOD-11", "title": "Remote HTTP Repositoryのsecurity", "summary": "OAuth tokenとproject権限をrequestごとに検証する", "keywords": ["audience", "project ACL"], "body": "tokenのaudience、scope、membershipを評価する。" },
-    { "id": "DOGFOOD-12", "title": "可読backupとrestore", "summary": "DBに依存しないMarkdown archiveを災害復旧へ使う", "keywords": ["backup", "restore"], "body": "人が通常fileとして読めるデータを別障害domainへ保存する。" }
+    { "id": "DOGFOOD-12", "title": "可読backupとrestore", "summary": "DBに依存しないMarkdown archiveを災害復旧へ使う", "keywords": ["backup", "restore"], "body": "人が通常fileとして読めるデータを別障害domainへ保存する。" },
+    { "id": "DOGFOOD-13", "title": "自動検索の誘導と受信箱でエージェント連携する", "summary": "Agent output is staged in an inbox and promoted after human approval", "keywords": ["inbox", "human approval", "promotion"], "body": "AI-generated suggestions remain provisional until a reviewer approves their promotion to curated knowledge." }
   ]
 }

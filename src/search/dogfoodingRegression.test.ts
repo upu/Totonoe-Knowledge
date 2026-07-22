@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import test from "node:test";
-import { searchKnowledgeDocuments, type KnowledgeDocument } from "./searchEngine";
+import {
+  parseKnowledgeDocument,
+  rankHybridKnowledgeDocuments,
+  searchKnowledgeDocuments,
+  type KnowledgeDocument,
+} from "./searchEngine";
 import {
   SqliteKnowledgeIndex,
   type KnowledgeIndexSource,
@@ -23,8 +28,13 @@ interface RegressionEntry {
   body: string;
 }
 
+interface SemanticRegressionCase extends RegressionCase {
+  similarities: Record<string, number>;
+}
+
 interface RegressionFixture {
   cases: RegressionCase[];
+  semanticCases: SemanticRegressionCase[];
   entries: RegressionEntry[];
 }
 
@@ -101,5 +111,35 @@ test("returns the same ranked dogfooding results from SQLite candidates and a di
     assertExpectedRank(indexed, regression);
     assert.equal(candidatePaths.size <= 200, true);
     assert.equal(byPath.size, documents.length);
+  }
+});
+
+test("finds the semantic-only dogfooding query below the former absolute similarity threshold", () => {
+  const parsed = documents.map(parseKnowledgeDocument);
+
+  for (const regression of fixture.semanticCases) {
+    const lexicalResults = searchKnowledgeDocuments(documents, regression.query);
+    assert.equal(
+      lexicalResults.some((result) => result.id === regression.expectedId),
+      false,
+      `${regression.query}: expected lexical-only search to miss ${regression.expectedId}`,
+    );
+
+    const semanticScores = new Map(Object.entries(regression.similarities).map(([id, similarity]) => {
+      const document = parsed.find((candidate) => candidate.id === id);
+      assert.ok(document, `missing semantic regression entry: ${id}`);
+      return [document.path, { similarity, provider: "ollama:embeddinggemma" }] as const;
+    }));
+    const hybridResults = rankHybridKnowledgeDocuments(
+      parsed,
+      regression.query,
+      semanticScores,
+    );
+    assertExpectedRank(hybridResults, regression);
+    const expected = hybridResults.find((result) => result.id === regression.expectedId);
+    assert.ok(expected);
+    assert.ok(expected.scoreBreakdown.semantic > 0);
+    assert.equal(expected.scoreBreakdown.semanticSimilarity, 0.3839);
+    assert.ok(expected.scoreBreakdown.reasons.some((reason) => reason.includes("相対=1.0000")));
   }
 });
