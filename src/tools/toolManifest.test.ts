@@ -40,7 +40,7 @@ test("contributes explicit save and search language model tools", async () => {
   assert.equal(settings["totonoeKnowledge.embedding.provider"]?.default, "disabled");
   assert.equal(settings["totonoeKnowledge.embedding.ollama.endpoint"]?.default, "http://127.0.0.1:11434");
   assert.equal(settings["totonoeKnowledge.embedding.ollama.model"]?.default, "embeddinggemma");
-  assert.equal(settings["totonoeKnowledge.embedding.minimumSimilarity"]?.default, 0.45);
+  assert.equal(settings["totonoeKnowledge.embedding.minimumSimilarity"]?.default, -1);
 
   const commands = new Set(manifest.contributes?.commands?.map((command) => command.command));
   for (const command of [

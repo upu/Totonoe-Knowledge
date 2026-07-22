@@ -58,3 +58,11 @@ test("metadata and semantic contributions are visible in score reasons", () => {
   assert.ok(result.scoreBreakdown.semantic > 0);
   assert.ok(result.scoreBreakdown.reasons.length >= 3);
 });
+
+test("an explicitly configured absolute floor still filters weaker semantic evidence", () => {
+  const target = document("approval.md", "Human approval gate", "Promote a draft after review");
+  const results = rankHybridKnowledgeDocuments([target], "担当者が認めてから採用", new Map([
+    [target.path, { similarity: 0.3839, provider: "fake:model" }],
+  ]), { minimumSemanticSimilarity: 0.45 });
+  assert.deepEqual(results, []);
+});

@@ -205,15 +205,15 @@ interface EmbeddingConfiguration {
 export function configuredEmbeddingProvider(): EmbeddingConfiguration {
   const configuration = vscode.workspace.getConfiguration("totonoeKnowledge");
   if (configuration.get<string>("embedding.provider", "disabled") !== "ollama") {
-    return { minimumSimilarity: 0.45 };
+    return { minimumSimilarity: -1 };
   }
-  const configuredMinimum = configuration.get<number>("embedding.minimumSimilarity", 0.45);
+  const configuredMinimum = configuration.get<number>("embedding.minimumSimilarity", -1);
   return {
     provider: new OllamaEmbeddingProvider({
       endpoint: configuration.get<string>("embedding.ollama.endpoint", "http://127.0.0.1:11434"),
       model: configuration.get<string>("embedding.ollama.model", "embeddinggemma"),
     }),
-    minimumSimilarity: configuredMinimum >= -1 && configuredMinimum < 1 ? configuredMinimum : 0.45,
+    minimumSimilarity: configuredMinimum >= -1 && configuredMinimum < 1 ? configuredMinimum : -1,
   };
 }
 

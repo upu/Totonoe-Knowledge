@@ -78,6 +78,7 @@ password=example-only-secret
 - [ ] `totonoeKnowledge.embedding.provider` の初期値が `disabled` であり、Ollamaへ通信しない
 - [ ] Ollamaで `embeddinggemma` を利用可能にし、providerを `ollama` にすると `.totonoe/vectors/index.json` が作られる
 - [ ] 言い換え検索で全文検索だけでは見つからないEntryがハイブリッド検索結果へ現れる
+- [ ] raw cosineが0.45未満でもtop-k内の正解Entryに相対化された意味scoreが付き、全文score 0のまま上位へ現れる
 - [ ] Quick PickとSearch Toolに全文・metadata・意味のscore理由とproviderが表示される
 - [ ] Ollamaを停止すると警告後に全文検索へ切り替わり、従来の検索結果が返る
 - [ ] endpointへLAN・外部ホストまたはHTTPSを設定すると拒否され、本文が送信されない

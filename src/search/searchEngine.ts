@@ -211,27 +211,42 @@ export function rankHybridKnowledgeDocuments(
   semanticScores: ReadonlyMap<string, SemanticDocumentScore>,
   options: HybridSearchOptions = {},
 ): KnowledgeSearchResult[] {
-  const minimumSimilarity = options.minimumSemanticSimilarity ?? 0.45;
+  const minimumSimilarity = options.minimumSemanticSimilarity ?? -1;
   if (!(minimumSimilarity >= -1 && minimumSimilarity < 1)) {
     throw new Error("minimumSemanticSimilarityは-1以上1未満で指定してください。");
   }
   const effective = options.version
     ? effectiveKnowledgeDocuments(documents, options.version)
     : documents;
+  const eligibleSemanticScores = effective.flatMap((document) => {
+    const semantic = semanticScores.get(document.path);
+    return semantic && semantic.similarity >= minimumSimilarity
+      ? [{ path: document.path, similarity: semantic.similarity }]
+      : [];
+  });
+  const eligibleSimilarities = eligibleSemanticScores.map(({ similarity }) => similarity);
+  const highestSimilarity = eligibleSimilarities.length ? Math.max(...eligibleSimilarities) : 0;
+  const lowestSimilarity = eligibleSimilarities.length ? Math.min(...eligibleSimilarities) : 0;
+  const similarityRange = highestSimilarity - lowestSimilarity;
+  const relativeSemanticScores = new Map(eligibleSemanticScores.map(({ path, similarity }) => [
+    path,
+    similarityRange > Number.EPSILON
+      ? (similarity - lowestSimilarity) / similarityRange
+      : 1,
+  ]));
   const results: KnowledgeSearchResult[] = [];
 
   for (const document of effective) {
     const lexical = lexicalScore(document, query);
     const semantic = semanticScores.get(document.path);
     const similarity = semantic?.similarity;
-    const hasSemanticEvidence = similarity !== undefined && similarity >= minimumSimilarity;
+    const relativeSemanticScore = relativeSemanticScores.get(document.path);
+    const hasSemanticEvidence = relativeSemanticScore !== undefined && relativeSemanticScore > 0;
     if (!lexical.hasEvidence && !hasSemanticEvidence) continue;
 
     const fullTextComponent = Math.min(lexical.fullText / 40, 1) * 45;
     const metadataComponent = Math.min(lexical.metadata / 20, 1) * 10;
-    const semanticComponent = similarity === undefined
-      ? 0
-      : Math.max(0, Math.min((similarity - minimumSimilarity) / (1 - minimumSimilarity), 1)) * 45;
+    const semanticComponent = (relativeSemanticScore ?? 0) * 45;
     const exactBonus = lexical.hasExactTerm ? 20 : 0;
     const score = fullTextComponent + metadataComponent + semanticComponent + exactBonus;
     const reasons = [
@@ -239,7 +254,10 @@ export function rankHybridKnowledgeDocuments(
       `metadata=${lexical.metadata.toFixed(2)}→${metadataComponent.toFixed(2)}`,
     ];
     if (similarity !== undefined) {
-      reasons.push(`意味=${similarity.toFixed(4)}→${semanticComponent.toFixed(2)}`);
+      const relativeReason = relativeSemanticScore === undefined
+        ? "下限未満"
+        : `相対=${relativeSemanticScore.toFixed(4)}`;
+      reasons.push(`意味=${similarity.toFixed(4)}(${relativeReason})→${semanticComponent.toFixed(2)}`);
     }
     if (exactBonus) reasons.push(`完全一致bonus=${exactBonus.toFixed(2)}`);
 

@@ -276,10 +276,10 @@
         },
         "totonoeKnowledge.embedding.minimumSimilarity": {
           "type": "number",
-          "default": 0.45,
+          "default": -1,
           "minimum": -1,
           "exclusiveMaximum": 1,
-          "description": "意味検索候補として採用するコサイン類似度の下限"
+          "description": "意味検索のtop-k候補へ適用する任意のコサイン類似度下限。既定の-1では絶対下限を設けません"
         },
         "totonoeKnowledge.generator": {
           "type": "string",
