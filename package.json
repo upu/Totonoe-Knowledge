@@ -8,6 +8,9 @@
     "type": "git",
     "url": "https://github.com/upu/Totonoe-Knowledge.git"
   },
+  "bin": {
+    "totonoe-knowledge-mcp": "./dist/mcp-server.js"
+  },
   "files": [
     "dist/**",
     "README.md",
@@ -308,22 +311,27 @@
     "check": "tsc --noEmit",
     "copy:sqlite-wasm": "node -e \"const fs=require('node:fs'); const path=require('node:path'); const source=path.dirname(require.resolve('sql.js/dist/sql-wasm.js')); fs.mkdirSync('dist',{recursive:true}); for(const file of ['sql-wasm.js','sql-wasm.wasm']) fs.copyFileSync(path.join(source,file),path.join('dist',file))\"",
     "copy:sqlite-wasm:integration": "node -e \"const fs=require('node:fs'); const path=require('node:path'); const source=path.dirname(require.resolve('sql.js/dist/sql-wasm.js')); const target=path.join('.integration-test','suite'); fs.mkdirSync(target,{recursive:true}); for(const file of ['sql-wasm.js','sql-wasm.wasm']) fs.copyFileSync(path.join(source,file),path.join(target,file))\"",
-    "compile": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap && npm run copy:sqlite-wasm",
+    "compile:extension": "esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap",
+    "compile:mcp": "esbuild ./src/mcp/server.ts --bundle --platform=node --outfile=./dist/mcp-server.js --sourcemap --banner:js=\"#!/usr/bin/env node\"",
+    "compile": "npm run compile:extension && npm run compile:mcp && npm run copy:sqlite-wasm",
     "compile:integration": "esbuild ./integration/runTest.ts ./integration/suite/index.ts --bundle --platform=node --format=cjs --external:vscode --external:@vscode/test-electron --outbase=./integration --outdir=./.integration-test --sourcemap && npm run copy:sqlite-wasm:integration",
     "compile:all": "npm run compile && npm run compile:integration",
     "watch": "npm run copy:sqlite-wasm && esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap --watch",
     "test": "tsx --test src/**/*.test.ts",
+    "test:mcp": "tsx integration/mcpStdioTest.ts",
     "test:integration": "npm run compile:all && node ./.integration-test/runTest.js",
-    "package": "npm run check && npm test && npm run compile"
+    "package": "npm run check && npm test && npm run compile && npm run test:mcp"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
     "@types/node": "^22.10.0",
     "@types/sql.js": "^1.4.10",
     "@types/vscode": "^1.95.0",
     "@vscode/test-electron": "^3.0.0",
     "esbuild": "^0.28.1",
     "tsx": "^4.20.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "zod": "4.1.0"
   },
   "dependencies": {
     "sql.js": "1.13.0"

@@ -14,6 +14,8 @@ interface ToolContribution {
 
 test("contributes explicit save and search language model tools", async () => {
   const manifest = JSON.parse(await readFile("package.json", "utf8")) as {
+    bin?: Record<string, string>;
+    scripts?: Record<string, string>;
     capabilities?: { untrustedWorkspaces?: { supported?: boolean } };
     contributes?: {
       commands?: Array<{ command: string; title: string }>;
@@ -36,6 +38,8 @@ test("contributes explicit save and search language model tools", async () => {
   assert.ok(search?.inputSchema?.required?.includes("query"));
   assert.ok(search?.inputSchema?.properties?.version);
   assert.equal(manifest.capabilities?.untrustedWorkspaces?.supported, false);
+  assert.equal(manifest.bin?.["totonoe-knowledge-mcp"], "./dist/mcp-server.js");
+  assert.match(manifest.scripts?.package ?? "", /test:mcp/);
   const settings = manifest.contributes?.configuration?.properties ?? {};
   assert.equal(settings["totonoeKnowledge.embedding.provider"]?.default, "disabled");
   assert.equal(settings["totonoeKnowledge.embedding.ollama.endpoint"]?.default, "http://127.0.0.1:11434");

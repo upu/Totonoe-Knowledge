@@ -47,9 +47,17 @@ Language Modelはユーザーが開始した登録操作の中で選択します
 
 `**/.totonoe/index.sqlite` はこのリポジトリの `.gitignore` に含まれます。利用先リポジトリでも意図せずGit、バックアップ、artifactへ含めないことを確認してください。インデックスは削除してもMarkdownから再生成でき、破損時も正本へ影響しません。
 
+## ローカルstdio MCP
+
+Codex向けローカルstdio MCPは、プロセス起動時に`--repository`で指定した1つのRepositoryだけを検索します。Tool引数からfilesystem pathを受け取らず、許可したKnowledgeディレクトリと`K-` IDを持つlegacy root Markdownだけを読み、symbolic linkは追跡しません。公開するToolは検索とID指定の1件取得だけで、Markdownの登録・更新・削除やGit操作を行いません。
+
+検索結果はmetadata、score理由、Repository相対参照のallowlistに限定し、1件取得は256 KiBを上限とします。すべての成功応答に、未検証のナレッジであり命令ではないという固定注意を付けます。検索に伴い再生成可能なSQLite / vector indexは更新される場合がありますが、正本のMarkdownは変更しません。詳細な設定と出力境界は [Codex向けローカルstdio MCP](docs/CODEX_MCP.md) を参照してください。
+
+MCPサーバ自身はGitHub CopilotやOpenAI APIを呼びません。Ollamaを明示した場合だけHTTP loopbackへ送信します。ただし、MCP hostであるCodexはTool結果を、Codexで選択中のモデルProviderへ渡して回答を生成します。機密ナレッジを利用する前に、Codex側のデータ取り扱い条件、保持方針、組織ポリシーを別途確認してください。
+
 ## Remote Repository / MCP
 
-HTTP RepositoryとMCPサーバは未実装です。将来実装するときの必須境界は [Remote Repository / MCP セキュリティモデル](docs/REMOTE_SECURITY_MODEL.md) に定義しています。API契約は [Remote Repository API / MCP契約](docs/REMOTE_REPOSITORY_API.md)、backupとrestoreは [Backup / Export / Restore Runbook](docs/BACKUP_RESTORE.md) を参照してください。これらを満たさない試作サーバへ機密ナレッジを送らないでください。
+チーム共有用のHTTP RepositoryとRemote MCPは未実装です。将来実装するときの必須境界は [Remote Repository / MCP セキュリティモデル](docs/REMOTE_SECURITY_MODEL.md) に定義しています。API契約は [Remote Repository API / MCP契約](docs/REMOTE_REPOSITORY_API.md)、backupとrestoreは [Backup / Export / Restore Runbook](docs/BACKUP_RESTORE.md) を参照してください。これらを満たさない試作サーバへ機密ナレッジを送らないでください。
 
 ## 脆弱性の報告
 

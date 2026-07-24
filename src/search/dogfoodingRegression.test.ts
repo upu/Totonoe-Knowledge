@@ -13,6 +13,7 @@ import {
   type KnowledgeIndexSource,
   type KnowledgeIndexStorage,
 } from "./sqliteIndex";
+import { searchKnowledgeSources, type KnowledgeSearchSource } from "./searchService";
 
 interface RegressionCase {
   query: string;
@@ -111,6 +112,25 @@ test("returns the same ranked dogfooding results from SQLite candidates and a di
     assertExpectedRank(indexed, regression);
     assert.equal(candidatePaths.size <= 200, true);
     assert.equal(byPath.size, documents.length);
+  }
+});
+
+test("keeps the dogfooding rankings through the search service shared by VS Code and MCP", async () => {
+  const index = new SqliteKnowledgeIndex(new MemoryStorage());
+  const sources: KnowledgeSearchSource[] = documents.map((document, sourceIndex) => ({
+    path: document.path,
+    fingerprint: `${sourceIndex}:${document.content.length}`,
+    readContent: async () => document.content,
+    readEmbeddingText: async () => document.content,
+  }));
+
+  for (const regression of fixture.cases) {
+    const search = await searchKnowledgeSources(sources, regression.query, { lexicalIndex: index });
+    assertExpectedRank(search.results, regression);
+    assert.deepEqual(
+      search.results.map((result) => result.id),
+      searchKnowledgeDocuments(documents, regression.query).map((result) => result.id),
+    );
   }
 });
 
