@@ -13,6 +13,7 @@
 - Add a read-only local stdio MCP for Codex with fixed repository roots, bounded search/get responses, shared ranking, and lexical fallback
 - Add preview-token-bound local stdio MCP registration for Codex with secret findings, canonical diffs, and conflict-safe one-time writes
 - Show bounded, skippable relation candidates with reasons and evidence before saving a new Entry
+- Add a Codex SessionEnd inbox hook that distills completed sessions into unapproved prepared-knowledge candidates without auto-registering them
 
 ## 0.1.0 - 2026-07-15
 
