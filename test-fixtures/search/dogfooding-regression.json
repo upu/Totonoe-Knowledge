@@ -18,9 +18,44 @@
       "query": "ボットの発言をすぐ正式記録にせず、担当者が内容を認めてから採用したい",
       "expectedId": "DOGFOOD-13",
       "maxRank": 1,
+      "expectedSimilarity": 0.3839,
+      "lexicalOnlyMisses": true,
       "similarities": {
         "DOGFOOD-13": 0.3839,
         "DOGFOOD-02": 0.3379
+      }
+    },
+    {
+      "query": "機械が作った案は保留箱に置き、責任者の許可を得た後だけ確定版へ移したい",
+      "expectedId": "DOGFOOD-14",
+      "maxRank": 3,
+      "expectedSimilarity": 0.2713,
+      "similarities": {
+        "DOGFOOD-08": 0.3215,
+        "DOGFOOD-05": 0.3175,
+        "DOGFOOD-01": 0.3050,
+        "DOGFOOD-02": 0.2920,
+        "DOGFOOD-04": 0.2820,
+        "DOGFOOD-14": 0.2713,
+        "DOGFOOD-07": 0.2650,
+        "DOGFOOD-13": 0.2520,
+        "DOGFOOD-10": 0.2400,
+        "DOGFOOD-06": 0.2250,
+        "DOGFOOD-09": 0.2100,
+        "DOGFOOD-12": 0.1950,
+        "DOGFOOD-03": 0.1750,
+        "DOGFOOD-11": 0.1565
+      }
+    }
+  ],
+  "negativeSemanticCases": [
+    {
+      "query": "火星基地の水耕農業設備",
+      "similarities": {
+        "DOGFOOD-01": 0.2040,
+        "DOGFOOD-02": 0.2040,
+        "DOGFOOD-03": 0.2040,
+        "DOGFOOD-04": 0.2040
       }
     }
   ],
@@ -38,5 +73,8 @@
     { "id": "DOGFOOD-11", "title": "Remote HTTP Repositoryのsecurity", "summary": "OAuth tokenとproject権限をrequestごとに検証する", "keywords": ["audience", "project ACL"], "body": "tokenのaudience、scope、membershipを評価する。" },
     { "id": "DOGFOOD-12", "title": "可読backupとrestore", "summary": "DBに依存しないMarkdown archiveを災害復旧へ使う", "keywords": ["backup", "restore"], "body": "人が通常fileとして読めるデータを別障害domainへ保存する。" },
     { "id": "DOGFOOD-13", "title": "自動検索の誘導と受信箱でエージェント連携する", "summary": "Agent output is staged in an inbox and promoted after human approval", "keywords": ["inbox", "human approval", "promotion"], "body": "AI-generated suggestions remain provisional until a reviewer approves their promotion to curated knowledge." }
+  ],
+  "semanticEntries": [
+    { "id": "DOGFOOD-14", "title": "自動検索の誘導と受信箱でエージェント連携する", "summary": "AIの提案を一度保留し、人間のレビュー後に正式な記録へ移す", "keywords": ["受信箱", "承認", "昇格"], "body": "責任者が内容を確認してから確定する。" }
   ]
 }

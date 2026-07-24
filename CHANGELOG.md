@@ -9,6 +9,7 @@
 - Fall back to existing lexical search when semantic search is disabled or unavailable
 - Keep all 12 v0.1 dogfooding queries as lexical and SQLite parity regressions
 - Rank semantic top-k candidates by relative similarity instead of dropping them at a fixed default threshold
+- Reduce semantic weight when the leading cosine candidates are not separated from their distribution
 - Add a read-only local stdio MCP for Codex with fixed repository roots, bounded search/get responses, shared ranking, and lexical fallback
 - Add preview-token-bound local stdio MCP registration for Codex with secret findings, canonical diffs, and conflict-safe one-time writes
 

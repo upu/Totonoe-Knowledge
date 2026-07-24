@@ -31,12 +31,21 @@ interface RegressionEntry {
 
 interface SemanticRegressionCase extends RegressionCase {
   similarities: Record<string, number>;
+  expectedSimilarity: number;
+  lexicalOnlyMisses?: boolean;
+}
+
+interface NegativeSemanticRegressionCase {
+  query: string;
+  similarities: Record<string, number>;
 }
 
 interface RegressionFixture {
   cases: RegressionCase[];
   semanticCases: SemanticRegressionCase[];
+  negativeSemanticCases: NegativeSemanticRegressionCase[];
   entries: RegressionEntry[];
+  semanticEntries: RegressionEntry[];
 }
 
 class MemoryStorage implements KnowledgeIndexStorage {
@@ -77,6 +86,13 @@ const documents: KnowledgeDocument[] = fixture.entries.map((entry) => ({
   path: `${entry.id}.md`,
   content: markdown(entry),
 }));
+const semanticDocuments: KnowledgeDocument[] = [
+  ...documents,
+  ...fixture.semanticEntries.map((entry) => ({
+    path: `${entry.id}.md`,
+    content: markdown(entry),
+  })),
+];
 
 function assertExpectedRank(results: ReturnType<typeof searchKnowledgeDocuments>, regression: RegressionCase): void {
   const rank = results.findIndex((result) => result.id === regression.expectedId) + 1;
@@ -134,22 +150,29 @@ test("keeps the dogfooding rankings through the search service shared by VS Code
   }
 });
 
-test("finds the semantic-only dogfooding query below the former absolute similarity threshold", () => {
-  const parsed = documents.map(parseKnowledgeDocument);
-
-  for (const regression of fixture.semanticCases) {
-    const lexicalResults = searchKnowledgeDocuments(documents, regression.query);
-    assert.equal(
-      lexicalResults.some((result) => result.id === regression.expectedId),
-      false,
-      `${regression.query}: expected lexical-only search to miss ${regression.expectedId}`,
-    );
-
-    const semanticScores = new Map(Object.entries(regression.similarities).map(([id, similarity]) => {
+function semanticScoresFor(regression: SemanticRegressionCase | NegativeSemanticRegressionCase) {
+  const parsed = semanticDocuments.map(parseKnowledgeDocument);
+  return {
+    parsed,
+    semanticScores: new Map(Object.entries(regression.similarities).map(([id, similarity]) => {
       const document = parsed.find((candidate) => candidate.id === id);
       assert.ok(document, `missing semantic regression entry: ${id}`);
       return [document.path, { similarity, provider: "ollama:embeddinggemma" }] as const;
-    }));
+    })),
+  };
+}
+
+test("keeps representative semantic dogfooding queries within their expected ranks", () => {
+  for (const regression of fixture.semanticCases) {
+    if (regression.lexicalOnlyMisses) {
+      const lexicalResults = searchKnowledgeDocuments(documents, regression.query);
+      assert.equal(
+        lexicalResults.some((result) => result.id === regression.expectedId),
+        false,
+        `${regression.query}: expected lexical-only search to miss ${regression.expectedId}`,
+      );
+    }
+    const { parsed, semanticScores } = semanticScoresFor(regression);
     const hybridResults = rankHybridKnowledgeDocuments(
       parsed,
       regression.query,
@@ -159,7 +182,19 @@ test("finds the semantic-only dogfooding query below the former absolute similar
     const expected = hybridResults.find((result) => result.id === regression.expectedId);
     assert.ok(expected);
     assert.ok(expected.scoreBreakdown.semantic > 0);
-    assert.equal(expected.scoreBreakdown.semanticSimilarity, 0.3839);
-    assert.ok(expected.scoreBreakdown.reasons.some((reason) => reason.includes("相対=1.0000")));
+    assert.equal(expected.scoreBreakdown.semanticSimilarity, regression.expectedSimilarity);
+    assert.ok(expected.scoreBreakdown.reasons.some((reason) => reason.includes("相対=")));
+    assert.ok(expected.scoreBreakdown.reasons.some((reason) => reason.includes("分布confidence=")));
+  }
+});
+
+test("does not manufacture semantic evidence for an unrelated flat distribution", () => {
+  for (const regression of fixture.negativeSemanticCases) {
+    const { parsed, semanticScores } = semanticScoresFor(regression);
+    assert.deepEqual(
+      rankHybridKnowledgeDocuments(parsed, regression.query, semanticScores),
+      [],
+      `${regression.query}: expected no result from an uninformative semantic distribution`,
+    );
   }
 });
