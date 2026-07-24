@@ -35,6 +35,7 @@ const candidates: RelationCandidate[] = [{
   appliesTo: "",
   path: "specifications/K-001.md",
   body: "# 結論\n現在仕様",
+  content: "---\nid: K-001\n---\n# 結論\n現在仕様",
   searchScore: 42,
   searchReasons: ["全文=20.00"],
   isCurrentView: true,

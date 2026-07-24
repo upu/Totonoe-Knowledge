@@ -8,9 +8,15 @@ import { VsCodeLanguageModelGenerator } from "../ai/vsCodeLanguageModelGenerator
 import {
   classifyRelationCandidates,
   relationCandidateQuery,
+  relationKinds,
   selectRelationCandidates,
   type RelationSuggestion,
 } from "../curation/relationCandidates";
+import {
+  buildRelationApprovalPlan,
+  type RelationDecision,
+} from "../curation/relationApproval";
+import type { ProposedDocumentUpdate } from "../knowledge/documentUpdate";
 import { renderKnowledge } from "../knowledge/markdown";
 import { createKnowledgeId } from "../knowledge/id";
 import { prepareKnowledgeTarget, saveKnowledgeDraft } from "../knowledge/repository";
@@ -35,6 +41,7 @@ import {
   registerPendingKnowledgeDraft,
   savePendingKnowledgeDraft,
 } from "./saveKnowledgeDraft";
+import { confirmKnowledgeApprovalPlan } from "./reviewKnowledgeChanges";
 
 type SourceKind = KnowledgeSource["kind"];
 type GeneratorMode = "ask" | "template" | "languageModel";
@@ -240,62 +247,115 @@ async function confirmRelationCandidateSend(
 }
 
 interface RelationSuggestionItem extends vscode.QuickPickItem {
-  suggestion?: RelationSuggestion;
+  action: "accept" | "edit" | "reject" | "evidence";
 }
 
-async function showRelationSuggestions(
+async function openRelationEvidence(
   repositoryRoot: vscode.Uri,
-  suggestions: readonly RelationSuggestion[],
+  suggestion: RelationSuggestion,
 ): Promise<void> {
-  const done: RelationSuggestionItem = {
-    label: "$(check) 候補確認を終えて登録へ進む",
-    alwaysShow: true,
-  };
-  const items: RelationSuggestionItem[] = suggestions.map((suggestion) => ({
-    label: `${suggestion.relation} · ${suggestion.evidence.title}`,
-    description: suggestion.evidence.id,
-    detail: `${suggestion.reason} · ${suggestion.isCurrentView ? "Current View · " : ""}${suggestion.evidence.path}`,
-    suggestion,
-  }));
+  const evidence = vscode.Uri.joinPath(
+    repositoryRoot,
+    ...suggestion.evidence.path.split("/"),
+  );
+  try {
+    await vscode.window.showTextDocument(
+      await vscode.workspace.openTextDocument(evidence),
+      { preview: true },
+    );
+  } catch (error) {
+    void vscode.window.showWarningMessage(
+      `根拠Entryを開けませんでした: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
 
+async function decideRelationSuggestion(
+  repositoryRoot: vscode.Uri,
+  suggestion: RelationSuggestion,
+): Promise<RelationDecision | undefined> {
   while (true) {
-    const selected = await vscode.window.showQuickPick([done, ...items], {
-      title: "既存Knowledge Entryとの関係候補",
-      placeHolder: "候補を開いて根拠を確認できます。ここでは関係を保存しません。",
+    const items: RelationSuggestionItem[] = [
+      {
+        label: `$(check) ${suggestion.relation}として採用`,
+        detail: suggestion.reason,
+        action: "accept",
+      },
+      {
+        label: "$(edit) 関係種別を編集して採用",
+        detail: `推定: ${suggestion.relation}`,
+        action: "edit",
+      },
+      {
+        label: "$(close) この候補を却下",
+        action: "reject",
+      },
+      {
+        label: "$(go-to-file) 根拠Entryを開く",
+        detail: `${suggestion.evidence.id} · ${suggestion.evidence.path}`,
+        action: "evidence",
+      },
+    ];
+    const selected = await vscode.window.showQuickPick(items, {
+      title: `${suggestion.evidence.title}（${suggestion.evidence.id}）`,
+      placeHolder: `${suggestion.isCurrentView ? "Current View · " : ""}${suggestion.reason}`,
       matchOnDescription: true,
       matchOnDetail: true,
       ignoreFocusOut: true,
     });
-    if (!selected?.suggestion) return;
-    const evidence = vscode.Uri.joinPath(
-      repositoryRoot,
-      ...selected.suggestion.evidence.path.split("/"),
-    );
-    try {
-      await vscode.window.showTextDocument(
-        await vscode.workspace.openTextDocument(evidence),
-        { preview: true },
-      );
-    } catch (error) {
-      void vscode.window.showWarningMessage(
-        `根拠Entryを開けませんでした: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    if (!selected) return undefined;
+    if (selected.action === "evidence") {
+      await openRelationEvidence(repositoryRoot, suggestion);
+      continue;
     }
+    if (selected.action === "reject") {
+      return { id: suggestion.id, action: "reject" };
+    }
+    if (selected.action === "accept") {
+      return {
+        id: suggestion.id,
+        action: "accept",
+        relation: suggestion.relation,
+      };
+    }
+    const relation = await vscode.window.showQuickPick(
+      relationKinds.map((value) => ({
+        label: value,
+        picked: value === suggestion.relation,
+      })),
+      {
+        title: `${suggestion.evidence.title}との関係種別`,
+        placeHolder: "推定を編集して採用",
+        ignoreFocusOut: true,
+      },
+    );
+    if (!relation) return undefined;
+    return { id: suggestion.id, action: "accept", relation: relation.label };
   }
 }
+
+type RelationReviewOutcome =
+  | {
+      status: "continue";
+      draft: KnowledgeDraft;
+      updates: ProposedDocumentUpdate[];
+    }
+  | { status: "cancelled" };
 
 async function reviewRelationCandidates(
   draft: KnowledgeDraft,
   repositoryRoot: vscode.Uri,
   indexRoot: vscode.Uri,
   context: vscode.ExtensionContext,
-): Promise<void> {
+): Promise<RelationReviewOutcome> {
   const action = await vscode.window.showInformationMessage(
     "保存前に、既存Knowledge Entryとの関係候補を理由・根拠付きで確認しますか？",
     "候補を確認",
     "省略して続ける",
   );
-  if (action !== "候補を確認") return;
+  if (action !== "候補を確認") {
+    return { status: "continue", draft, updates: [] };
+  }
 
   const search = await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Window, title: "関係候補を検索中" },
@@ -303,6 +363,8 @@ async function reviewRelationCandidates(
       repositoryRoot,
       indexRoot,
       relationCandidateQuery(draft),
+      undefined,
+      { readOnly: true },
     ),
   );
   const candidates = selectRelationCandidates(draft, search.results);
@@ -310,14 +372,16 @@ async function reviewRelationCandidates(
     void vscode.window.showInformationMessage(
       "比較する既存Entryが見つからなかったため、関係を設定せず登録を続けます。",
     );
-    return;
+    return { status: "continue", draft, updates: [] };
   }
 
   const model = await chooseLanguageModel(
     context,
     "利用できるAIモデルがないため、関係候補を作らず登録を続けます。",
   );
-  if (!model || !(await confirmRelationCandidateSend(draft, candidates))) return;
+  if (!model || !(await confirmRelationCandidateSend(draft, candidates))) {
+    return { status: "continue", draft, updates: [] };
+  }
 
   const outcome = await vscode.window.withProgress(
     {
@@ -335,15 +399,71 @@ async function reviewRelationCandidates(
     void vscode.window.showWarningMessage(
       `関係候補を作れなかったため、関係を設定せず登録を続けます: ${outcome.reason}`,
     );
-    return;
+    return { status: "continue", draft, updates: [] };
   }
   if (outcome.status === "none") {
     void vscode.window.showInformationMessage(
       "根拠のある関係候補はありませんでした。関係を設定せず登録を続けます。",
     );
-    return;
+    return { status: "continue", draft, updates: [] };
   }
-  await showRelationSuggestions(repositoryRoot, outcome.suggestions);
+  const decisions: RelationDecision[] = [];
+  for (const suggestion of outcome.suggestions) {
+    const decision = await decideRelationSuggestion(repositoryRoot, suggestion);
+    if (!decision) return { status: "cancelled" };
+    decisions.push(decision);
+  }
+
+  let plan = buildRelationApprovalPlan(
+    draft,
+    candidates,
+    outcome.suggestions,
+    decisions,
+  );
+  if (plan.status === "duplicate") {
+    const duplicateCandidate = plan.candidate;
+    const duplicateAction = await vscode.window.showWarningMessage(
+      `Duplicate候補: ${duplicateCandidate.title}（${duplicateCandidate.id}）。自動統合は行いません。`,
+      { modal: true },
+      "新規登録を中止",
+      "既存Entryを編集",
+      "Duplicate判定を却下",
+    );
+    if (duplicateAction === "Duplicate判定を却下") {
+      plan = buildRelationApprovalPlan(
+        draft,
+        candidates,
+        outcome.suggestions,
+        decisions.map((decision) =>
+          decision.id === duplicateCandidate.id
+            ? { id: decision.id, action: "reject" }
+            : decision
+        ),
+      );
+    } else {
+      if (duplicateAction === "既存Entryを編集") {
+        const target = vscode.Uri.joinPath(
+          repositoryRoot,
+          ...duplicateCandidate.path.split("/"),
+        );
+        await vscode.window.showTextDocument(
+          await vscode.workspace.openTextDocument(target),
+          { preview: false },
+        );
+      }
+      return { status: "cancelled" };
+    }
+  }
+  if (plan.status !== "continue") return { status: "cancelled" };
+  const approvedUpdates = await confirmKnowledgeApprovalPlan(
+    draft,
+    plan.draft,
+    plan.updates,
+  );
+  if (!approvedUpdates) {
+    return { status: "cancelled" };
+  }
+  return { ...plan, updates: approvedUpdates };
 }
 
 async function confirmLocalSave(markdown: string): Promise<boolean> {
@@ -414,20 +534,24 @@ export async function registerKnowledge(
   if (!edited) return;
 
   const now = new Date();
-  const draft: KnowledgeDraft = {
+  let draft: KnowledgeDraft = {
     ...edited,
     id: createKnowledgeId(now),
     source: source.text,
     createdAt: now.toISOString(),
   };
 
+  let approvedUpdates: ProposedDocumentUpdate[] = [];
   try {
-    await reviewRelationCandidates(
+    const review = await reviewRelationCandidates(
       draft,
       location.repositoryRoot,
       location.indexRoot,
       context,
     );
+    if (review.status === "cancelled") return;
+    draft = review.draft;
+    approvedUpdates = review.updates;
   } catch (error) {
     void vscode.window.showWarningMessage(
       `関係候補を確認できなかったため、従来の登録を続けます: ${error instanceof Error ? error.message : String(error)}`,
@@ -440,7 +564,13 @@ export async function registerKnowledge(
   if (target.scheme === "file") {
     if (!(await confirmPathBoundDraft(markdown))) return;
     const document = await openPathBoundDraft(target, markdown);
-    registerPendingKnowledgeDraft(document, target, relativeTarget);
+    registerPendingKnowledgeDraft(
+      document,
+      target,
+      relativeTarget,
+      location.repositoryRoot,
+      approvedUpdates,
+    );
     await vscode.window.showTextDocument(document, { preview: false });
     const action = await vscode.window.showInformationMessage(
       `保存先を設定しました: ${relativeTarget}。内容を確認・編集して登録してください。Ctrl+Sでも保存できます。`,
@@ -458,7 +588,12 @@ export async function registerKnowledge(
   );
   if (action !== "ナレッジとして保存" || !(await confirmLocalSave(document.getText()))) return;
 
-  const savedTarget = await saveKnowledgeDraft(location.repositoryRoot, draft, document.getText());
+  const savedTarget = await saveKnowledgeDraft(
+    location.repositoryRoot,
+    draft,
+    document.getText(),
+    approvedUpdates,
+  );
   await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(savedTarget), { preview: false });
   void vscode.window.showInformationMessage(`ナレッジを保存しました: ${relativeTarget}`);
 }

@@ -14,6 +14,7 @@
 - Add preview-token-bound local stdio MCP registration for Codex with secret findings, canonical diffs, and conflict-safe one-time writes
 - Show bounded, skippable relation candidates with reasons and evidence before saving a new Entry
 - Add a Codex SessionEnd inbox hook that distills completed sessions into unapproved prepared-knowledge candidates without auto-registering them
+- Apply accepted relation and Markdown changes only after editable diff review and final human approval
 
 ## 0.1.0 - 2026-07-15
 

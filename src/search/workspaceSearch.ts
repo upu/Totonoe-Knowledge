@@ -108,6 +108,18 @@ class VscodeEmbeddingIndexStorage implements EmbeddingIndexStorage {
   }
 }
 
+class MemoryEmbeddingIndexStorage implements EmbeddingIndexStorage {
+  private data: string | undefined;
+
+  async read(): Promise<string | undefined> {
+    return this.data;
+  }
+
+  async write(data: string): Promise<void> {
+    this.data = data;
+  }
+}
+
 const indexes = new Map<string, SqliteKnowledgeIndex>();
 const embeddingIndexes = new Map<string, EmbeddingIndex>();
 
@@ -185,6 +197,7 @@ export async function searchWorkspaceKnowledge(
   indexRoot: vscode.Uri,
   query: string,
   version?: string,
+  options: { readOnly?: boolean } = {},
 ): Promise<WorkspaceSearchResult> {
   const sources = await collectSources(repositoryRoot);
   let embedding: EmbeddingConfiguration;
@@ -192,12 +205,21 @@ export async function searchWorkspaceKnowledge(
     embedding = configuredEmbeddingProvider();
   } catch (error) {
     const fallback = await searchKnowledgeSources(sources, query, {
-      lexicalIndex: indexFor(indexRoot),
+      lexicalIndex: options.readOnly ? undefined : indexFor(indexRoot),
     }, version);
     return {
       ...fallback,
       embeddingError: error instanceof Error ? error : new Error(String(error)),
     };
+  }
+  if (options.readOnly) {
+    return await searchKnowledgeSources(sources, query, {
+      semantic: embedding.provider ? {
+        provider: embedding.provider,
+        index: new EmbeddingIndex(new MemoryEmbeddingIndexStorage(), embedding.provider),
+        minimumSimilarity: embedding.minimumSimilarity,
+      } : undefined,
+    }, version);
   }
   return await searchKnowledgeSources(sources, query, {
     lexicalIndex: indexFor(indexRoot),

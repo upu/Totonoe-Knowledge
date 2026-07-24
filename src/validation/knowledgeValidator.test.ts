@@ -58,6 +58,20 @@ test("detects duplicate IDs, self references, unknown references, and duplicate 
   assert.ok(codes.includes("duplicate-reference"));
 });
 
+test("validates optional conflicts references without requiring legacy entries to migrate", () => {
+  const legacy = entry("K-20260715-010");
+  const conflicted = entry("K-20260715-011")
+    .replace("supersedes: []", "supersedes: []\nconflicts:\n  - K-20260715-010");
+
+  assert.equal(
+    validateKnowledgeDocuments([
+      { path: "legacy.md", content: legacy },
+      { path: "conflicted.md", content: conflicted },
+    ]).some((value) => value.code === "invalid-list" || value.code === "unknown-reference"),
+    false,
+  );
+});
+
 test("warns when a fixed heading is absent", () => {
   const issues = validateKnowledgeDocuments([
     { path: "one.md", content: entry("K-20260715-001").replace("# 注意点\n", "") },

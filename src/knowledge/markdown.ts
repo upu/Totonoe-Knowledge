@@ -66,6 +66,7 @@ created_at: ${draft.createdAt}
 updated_at: ${draft.createdAt}
 ${yamlList("related", draft.relatedKnowledgeIds ?? [])}
 ${yamlList("supersedes", draft.supersedesKnowledgeIds ?? [])}
+${yamlList("conflicts", draft.conflictKnowledgeIds ?? [])}
 ---
 
 # 結論

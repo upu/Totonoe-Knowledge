@@ -20,6 +20,7 @@ interface ValidatedEntry {
   id?: string;
   related: string[];
   supersedes: string[];
+  conflicts: string[];
   keyLines: Record<string, number>;
 }
 
@@ -54,7 +55,7 @@ export function validateKnowledgeDocuments(
     const parsed = parseFrontmatter(document.content);
     if (!parsed.hasFrontmatter) {
       issues.push(issue(document, 0, "error", "missing-frontmatter", "Markdown front matterがありません。"));
-      entries.push({ path: document.path, related: [], supersedes: [], keyLines: {} });
+      entries.push({ path: document.path, related: [], supersedes: [], conflicts: [], keyLines: {} });
       continue;
     }
 
@@ -93,6 +94,18 @@ export function validateKnowledgeDocuments(
           `${field} は文字列配列で指定してください。`,
         ));
       }
+    }
+    if (
+      Object.hasOwn(parsed.values, "conflicts")
+      && frontmatterList(parsed, "conflicts") === undefined
+    ) {
+      issues.push(issue(
+        document,
+        parsed.keyLines.conflicts ?? 1,
+        "error",
+        "invalid-list",
+        "conflicts は文字列配列で指定してください。",
+      ));
     }
 
     const type = frontmatterString(parsed, "type");
@@ -171,6 +184,7 @@ export function validateKnowledgeDocuments(
       id,
       related: frontmatterList(parsed, "related") ?? [],
       supersedes: frontmatterList(parsed, "supersedes") ?? [],
+      conflicts: frontmatterList(parsed, "conflicts") ?? [],
       keyLines: parsed.keyLines,
     };
     entries.push(entry);
@@ -197,6 +211,7 @@ export function validateKnowledgeDocuments(
     for (const [field, references] of [
       ["related", entry.related],
       ["supersedes", entry.supersedes],
+      ["conflicts", entry.conflicts],
     ] as const) {
       for (const reference of new Set(references)) {
         const line = referenceLine(document.content, reference, entry.keyLines[field] ?? 1);
