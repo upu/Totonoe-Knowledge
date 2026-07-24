@@ -6,9 +6,9 @@ import {
 import {
   knowledgeTypes,
   type GeneratedKnowledge,
-  type KnowledgeContent,
   type KnowledgeType,
 } from "../knowledge/types";
+import { normalizeRegistrationInput } from "../knowledge/registrationInput";
 
 const preparedKnowledgeVersion = "1";
 const sectionNames = [
@@ -74,34 +74,20 @@ export function parsePreparedKnowledgeSource(text: string): GeneratedKnowledge |
   const missing = sectionNames.filter((name) => sections[name] === undefined);
   if (missing.length) throw preparedSourceError(`見出しが不足しています: ${missing.join(", ")}`);
 
-  const content: KnowledgeContent = {
-    conclusion: sections["結論"] ?? "",
-    background: sections["背景"] ?? "",
-    verified: parseList(sections["確認したこと"] ?? ""),
-    procedure: sections["対応方法"] ?? "",
-    cautions: parseList(sections["注意点"] ?? ""),
-    unresolved: parseList(sections["未解決事項"] ?? ""),
-  };
-  for (const [name, value] of [
-    ["結論", content.conclusion],
-    ["背景", content.background],
-    ["対応方法", content.procedure],
-  ] as const) {
-    if (!value) throw preparedSourceError(`${name}に本文が必要です。`);
+  try {
+    return normalizeRegistrationInput({
+      title,
+      summary,
+      type: type as KnowledgeType,
+      keywords: normalizedKeywords,
+      conclusion: sections["結論"] ?? "",
+      background: sections["背景"] ?? "",
+      verified: parseList(sections["確認したこと"] ?? ""),
+      procedure: sections["対応方法"] ?? "",
+      cautions: parseList(sections["注意点"] ?? ""),
+      unresolved: parseList(sections["未解決事項"] ?? ""),
+    });
+  } catch (error) {
+    throw preparedSourceError(error instanceof Error ? error.message : String(error));
   }
-  for (const [name, values] of [
-    ["確認したこと", content.verified],
-    ["注意点", content.cautions],
-    ["未解決事項", content.unresolved],
-  ] as const) {
-    if (!values.length) throw preparedSourceError(`${name}には1つ以上の箇条書きが必要です。`);
-  }
-
-  return {
-    title,
-    summary,
-    type: type as KnowledgeType,
-    keywords: normalizedKeywords,
-    content,
-  };
 }

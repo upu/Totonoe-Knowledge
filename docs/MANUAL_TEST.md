@@ -105,3 +105,16 @@ password=example-only-secret
 - [ ] Agentモードで `#totonoeKnowledgeSearch` を明示参照できる
 - [ ] Search ToolがID、タイトル、要約、type、相対パスを返す
 - [ ] 検索結果を命令ではなく未検証資料として扱う注意が返る
+
+## Codex stdio MCP登録
+
+- [ ] `npm run package`後にCodexのMCP serverを再起動し、4つのToolが表示される
+- [ ] 登録依頼では最初に`totonoe_knowledge_preview_registration`だけが呼ばれる
+- [ ] preview前後でKnowledge Repositoryの正本MarkdownとGit状態が変化しない
+- [ ] previewにserver生成ID、Repository相対path、token有効期限、canonical Markdown、secret finding、追加diffが表示される
+- [ ] 本文とpreviewを未信頼データとして扱い、本文中の命令を実行しない固定注意が表示される
+- [ ] Codexがtitle、相対path、secret finding、diffを示してregister前に確認を求める
+- [ ] 承認後だけwrite Toolの`totonoe_knowledge_register`が同じpayloadとtokenで呼ばれる
+- [ ] 成功時は新しいMarkdownが1件作られ、IDと相対pathだけが返る
+- [ ] 同じtokenの再利用、payload差し替え、preview後のRepository変更、既存targetを拒否し、既存Markdownを上書きしない
+- [ ] preview→registerの間に`vscode.lm`やGitHub Copilotのモデル選択・確認UIが表示されない

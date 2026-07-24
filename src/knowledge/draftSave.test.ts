@@ -22,6 +22,14 @@ test("does not overwrite a target created after preview", async () => {
   assert.equal(saves, 0);
 });
 
+test("treats an exclusive-save collision as a conflict", async () => {
+  const result = await persistDraft({
+    targetExists: async () => false,
+    save: async () => "conflict",
+  });
+  assert.deepEqual(result, { status: "conflict" });
+});
+
 test("reports a false or rejected editor save as a failure", async () => {
   assert.deepEqual(
     await persistDraft({ targetExists: async () => false, save: async () => false }),

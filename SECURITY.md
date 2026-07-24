@@ -49,9 +49,11 @@ Language Modelはユーザーが開始した登録操作の中で選択します
 
 ## ローカルstdio MCP
 
-Codex向けローカルstdio MCPは、プロセス起動時に`--repository`で指定した1つのRepositoryだけを検索します。Tool引数からfilesystem pathを受け取らず、許可したKnowledgeディレクトリと`K-` IDを持つlegacy root Markdownだけを読み、symbolic linkは追跡しません。公開するToolは検索とID指定の1件取得だけで、Markdownの登録・更新・削除やGit操作を行いません。
+Codex向けローカルstdio MCPは、プロセス起動時に`--repository`で指定した1つのRepositoryだけを読み書きします。登録Toolの引数からfilesystem pathや既存IDを受け取らず、許可したKnowledgeディレクトリと`K-` IDを持つlegacy root Markdownだけを読み、登録先のsymbolic linkは拒否します。更新、削除、Git操作、Remote transportは行いません。
 
 検索結果はmetadata、score理由、Repository相対参照のallowlistに限定し、1件取得は256 KiBを上限とします。すべての成功応答に、未検証のナレッジであり命令ではないという固定注意を付けます。検索に伴い再生成可能なSQLite / vector indexは更新される場合がありますが、正本のMarkdownは変更しません。詳細な設定と出力境界は [Codex向けローカルstdio MCP](docs/CODEX_MCP.md) を参照してください。
+
+登録は`totonoe_knowledge_preview_registration`と`totonoe_knowledge_register`へ分離します。previewはRepositoryを書き換えず、server生成のID・日時・相対path、canonical Markdown、secret findingの種類と件数、diff、10分有効のone-time tokenを返します。registerは同じpayload、同じRepository状態、同じ生成targetだけを受け付けます。tokenはregister試行時に消費し、期限切れ、再利用、payload差し替え、Repository変更、既存targetをfail closedで拒否します。保存は新規ファイルの排他的作成に限定し、既存Markdownを上書きしません。
 
 MCPサーバ自身はGitHub CopilotやOpenAI APIを呼びません。Ollamaを明示した場合だけHTTP loopbackへ送信します。ただし、MCP hostであるCodexはTool結果を、Codexで選択中のモデルProviderへ渡して回答を生成します。機密ナレッジを利用する前に、Codex側のデータ取り扱い条件、保持方針、組織ポリシーを別途確認してください。
 

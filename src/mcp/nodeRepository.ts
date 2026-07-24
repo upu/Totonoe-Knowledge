@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { frontmatterString, parseFrontmatter } from "../knowledge/frontmatter";
+import { persistDraft, type DraftSaveResult } from "../knowledge/draftSave";
 import { knowledgeDirectories } from "../knowledge/markdown";
 import { EmbeddingIndex, type EmbeddingIndexStorage } from "../search/embeddingIndex";
 import type { EmbeddingProvider } from "../search/embeddingProvider";
@@ -68,6 +70,13 @@ class NodeEmbeddingIndexStorage implements EmbeddingIndexStorage {
 }
 
 async function collectMarkdownFiles(directory: string): Promise<string[]> {
+  try {
+    const stat = await fs.lstat(directory);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) return [];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
   let entries;
   try {
     entries = await fs.readdir(directory, { withFileTypes: true });
@@ -99,6 +108,44 @@ async function collectLegacyRootFiles(repositoryRoot: string): Promise<string[]>
 
 function relativeReference(repositoryRoot: string, target: string): string {
   return path.relative(repositoryRoot, target).split(path.sep).join("/");
+}
+
+function registrationTargetPath(repositoryRoot: string, reference: string): string {
+  const normalized = reference.replaceAll("\\", "/");
+  if (
+    !normalized
+    || path.isAbsolute(reference)
+    || normalized.startsWith("/")
+    || normalized.split("/").includes("..")
+  ) {
+    throw new Error("Repository相対の登録先を作成できませんでした。");
+  }
+  const target = path.resolve(repositoryRoot, ...normalized.split("/"));
+  const relative = path.relative(repositoryRoot, target);
+  if (!relative || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error("Repository相対の登録先を作成できませんでした。");
+  }
+  return target;
+}
+
+async function assertSafeRegistrationParent(
+  repositoryRoot: string,
+  target: string,
+): Promise<void> {
+  const relativeParent = path.relative(repositoryRoot, path.dirname(target));
+  let current = repositoryRoot;
+  for (const segment of relativeParent.split(path.sep).filter(Boolean)) {
+    current = path.join(current, segment);
+    try {
+      const stat = await fs.lstat(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error("登録先ディレクトリにsymbolic linkまたは非directoryがあります。");
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw error;
+    }
+  }
 }
 
 export async function collectNodeKnowledgeSources(
@@ -171,6 +218,75 @@ export class NodeKnowledgeRepository {
     }
     if (matches.length > 1) throw new Error(`Duplicate knowledge ID: ${id}`);
     return matches[0];
+  }
+
+  async registrationStateFingerprint(): Promise<string> {
+    const hash = createHash("sha256");
+    for (const source of await collectNodeKnowledgeSources(this.repositoryRoot)) {
+      const content = await source.readContent();
+      hash.update(`${Buffer.byteLength(source.path, "utf8")}:`);
+      hash.update(source.path, "utf8");
+      hash.update(`${Buffer.byteLength(content, "utf8")}:`);
+      hash.update(content, "utf8");
+    }
+    return hash.digest("hex");
+  }
+
+  async registrationTargetExists(reference: string): Promise<boolean> {
+    const target = registrationTargetPath(this.repositoryRoot, reference);
+    await assertSafeRegistrationParent(this.repositoryRoot, target);
+    try {
+      await fs.lstat(target);
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+      throw error;
+    }
+  }
+
+  async saveRegistration(
+    reference: string,
+    markdown: string,
+  ): Promise<DraftSaveResult> {
+    const target = registrationTargetPath(this.repositoryRoot, reference);
+    await assertSafeRegistrationParent(this.repositoryRoot, target);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await assertSafeRegistrationParent(this.repositoryRoot, target);
+
+    return await persistDraft({
+      targetExists: () => this.registrationTargetExists(reference),
+      save: async () => {
+        let handle;
+        try {
+          handle = await fs.open(target, "wx");
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "EEXIST") return "conflict";
+          throw error;
+        }
+
+        let failure: unknown;
+        try {
+          await handle.writeFile(markdown, "utf8");
+          await handle.sync();
+        } catch (error) {
+          failure = error;
+        }
+        try {
+          await handle.close();
+        } catch (error) {
+          failure ??= error;
+        }
+        if (failure !== undefined) {
+          try {
+            await fs.rm(target, { force: true });
+          } catch {
+            // Preserve the original write or close failure.
+          }
+          throw failure;
+        }
+        return true;
+      },
+    });
   }
 }
 

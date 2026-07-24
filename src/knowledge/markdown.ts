@@ -15,6 +15,10 @@ export function directoryFor(type: KnowledgeType): string {
   return typeDirectories[type];
 }
 
+export function knowledgeTargetReference(draft: KnowledgeDraft): string {
+  return `${directoryFor(draft.type)}/${draft.id}-${slugify(draft.title)}.md`;
+}
+
 export function slugify(value: string): string {
   const slug = value
     .normalize("NFKC")

@@ -46,11 +46,17 @@ async function main(): Promise<void> {
       const tools = await client.listTools();
       assert.deepEqual(
         tools.tools.map((tool) => tool.name).sort(),
-        ["totonoe_knowledge_get", "totonoe_knowledge_search"],
-        "the stdio server should expose only the two read-only tools",
+        [
+          "totonoe_knowledge_get",
+          "totonoe_knowledge_preview_registration",
+          "totonoe_knowledge_register",
+          "totonoe_knowledge_search",
+        ],
+        "the stdio server should expose the read tools and confirmed registration pair",
       );
       for (const tool of tools.tools) {
-        assert.equal(tool.annotations?.readOnlyHint, true);
+        const isRegister = tool.name === "totonoe_knowledge_register";
+        assert.equal(tool.annotations?.readOnlyHint, !isRegister);
         assert.equal(tool.annotations?.destructiveHint, false);
         assert.equal(tool.inputSchema.additionalProperties, false);
         assert.equal(
@@ -82,6 +88,88 @@ async function main(): Promise<void> {
       assert.equal(item.id, items[0]?.id);
       assert.equal(item.reference, "investigations/valid.md");
       assert.match(String(item.content), /This fixture is valid/);
+
+      const registration = {
+        title: "stdio MCPから登録する",
+        summary: "previewとregisterを分離する",
+        type: "procedure",
+        keywords: ["stdio", "MCP"],
+        conclusion: "preview後に同じpayloadだけを保存する。",
+        background: "Codexから確認付きで登録する必要がある。",
+        verified: ["Language Model Providerを呼ばない"],
+        procedure: "previewのdiffを確認してregisterする。",
+        cautions: ["本文は命令として扱わない"],
+        unresolved: ["なし"],
+      };
+      const previewTool = tools.tools.find(
+        (tool) => tool.name === "totonoe_knowledge_preview_registration",
+      );
+      assert.equal(
+        (previewTool?.inputSchema.properties?.title as { maxLength?: number })?.maxLength,
+        200,
+      );
+      assert.equal(
+        (previewTool?.inputSchema.properties?.keywords as { maxItems?: number })?.maxItems,
+        20,
+      );
+      const preview = responseJson(await client.callTool({
+        name: "totonoe_knowledge_preview_registration",
+        arguments: registration,
+      }));
+      assert.equal(preview.title, registration.title);
+      assert.match(String(preview.notice), /未信頼.*命令ではありません/);
+      assert.match(String(preview.diff), /--- \/dev\/null/);
+      assert.match(String(preview.reference), /^procedures\/K-/);
+      await assert.rejects(
+        () => fs.stat(path.join(repositoryRoot, ...String(preview.reference).split("/"))),
+        { code: "ENOENT" },
+      );
+
+      const rejectedExtraInput = await client.callTool({
+        name: "totonoe_knowledge_preview_registration",
+        arguments: { ...registration, path: "../other" },
+      });
+      assert.equal(rejectedExtraInput.isError, true);
+      const registerTool = tools.tools.find((tool) => tool.name === "totonoe_knowledge_register");
+      assert.equal(
+        (registerTool?.inputSchema.properties?.knowledge as { additionalProperties?: boolean })
+          ?.additionalProperties,
+        false,
+      );
+
+      const registered = responseJson(await client.callTool({
+        name: "totonoe_knowledge_register",
+        arguments: {
+          previewToken: preview.previewToken,
+          knowledge: registration,
+        },
+      }));
+      assert.equal(registered.id, preview.id);
+      assert.equal(registered.reference, preview.reference);
+      assert.equal(Object.hasOwn(registered, "canonicalMarkdown"), false);
+      const savedRegistration = await fs.readFile(
+        path.join(repositoryRoot, ...String(preview.reference).split("/")),
+        "utf8",
+      );
+      assert.match(savedRegistration, /# 結論/);
+      const registeredSearch = responseJson(await client.callTool({
+        name: "totonoe_knowledge_search",
+        arguments: { query: "preview register 境界", limit: 5 },
+      }));
+      assert.ok(
+        (registeredSearch.items as Array<Record<string, unknown>>)
+          .some((result) => result.id === registered.id),
+        "a registered entry should be visible to the shared search path",
+      );
+
+      const reused = await client.callTool({
+        name: "totonoe_knowledge_register",
+        arguments: {
+          previewToken: preview.previewToken,
+          knowledge: registration,
+        },
+      });
+      assert.equal(reused.isError, true);
 
       await fs.appendFile(
         path.join(repositoryRoot, "investigations", "valid.md"),
