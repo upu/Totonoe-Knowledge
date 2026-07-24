@@ -23,6 +23,7 @@ export interface RelationCandidate {
   appliesTo: string;
   path: string;
   body: string;
+  content: string;
   searchScore: number;
   searchReasons: string[];
   isCurrentView: boolean;
@@ -164,6 +165,7 @@ export function selectRelationCandidates(
       appliesTo: result.appliesTo,
       path: result.path,
       body: result.body,
+      content: result.content,
       searchScore: result.score,
       searchReasons: [...result.scoreBreakdown.reasons],
       isCurrentView: currentView,

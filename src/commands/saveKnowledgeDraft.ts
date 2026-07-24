@@ -1,13 +1,23 @@
 import * as vscode from "vscode";
-import { persistDraft } from "../knowledge/draftSave";
+import {
+  persistApprovedDocumentUpdates,
+  persistDraft,
+  persistDraftTransaction,
+  type DraftDocumentUpdateOperations,
+  type DraftSaveResult,
+} from "../knowledge/draftSave";
+import type { ProposedDocumentUpdate } from "../knowledge/documentUpdate";
 
 interface PendingKnowledgeDraft {
   document: vscode.TextDocument;
   target: vscode.Uri;
   relativeTarget: string;
+  repositoryRoot?: vscode.Uri;
+  updates: ProposedDocumentUpdate[];
 }
 
 const pendingDrafts = new Map<string, PendingKnowledgeDraft>();
+const commandSaves = new Set<string>();
 
 function key(uri: vscode.Uri): string {
   return uri.toString(true);
@@ -17,16 +27,16 @@ export function registerPendingKnowledgeDraft(
   document: vscode.TextDocument,
   target: vscode.Uri,
   relativeTarget: string,
+  repositoryRoot?: vscode.Uri,
+  updates: readonly ProposedDocumentUpdate[] = [],
 ): void {
-  pendingDrafts.set(key(document.uri), { document, target, relativeTarget });
-}
-
-export function clearPendingKnowledgeDraft(document: vscode.TextDocument): void {
-  const savedKey = key(document.uri);
-  pendingDrafts.delete(savedKey);
-  for (const [draftKey, pending] of pendingDrafts) {
-    if (key(pending.target) === savedKey) pendingDrafts.delete(draftKey);
-  }
+  pendingDrafts.set(key(document.uri), {
+    document,
+    target,
+    relativeTarget,
+    repositoryRoot,
+    updates: [...updates],
+  });
 }
 
 function resolvePendingDraft(uri: vscode.Uri): PendingKnowledgeDraft | undefined {
@@ -39,6 +49,7 @@ function resolvePendingDraft(uri: vscode.Uri): PendingKnowledgeDraft | undefined
     document,
     target,
     relativeTarget: vscode.workspace.asRelativePath(target, false),
+    updates: [],
   };
 }
 
@@ -52,6 +63,32 @@ async function targetExists(target: vscode.Uri): Promise<boolean> {
   }
 }
 
+function approvedUpdateOperations(
+  pending: PendingKnowledgeDraft,
+): DraftDocumentUpdateOperations[] {
+  if (!pending.repositoryRoot) return [];
+  return pending.updates.map((update) => {
+    const target = vscode.Uri.joinPath(
+      pending.repositoryRoot!,
+      ...update.path.split("/"),
+    );
+    return {
+      expectedContent: update.expectedContent,
+      proposedContent: update.proposedContent,
+      read: async () => Buffer.from(
+        await vscode.workspace.fs.readFile(target),
+      ).toString("utf8"),
+      write: async (content: string) => {
+        await vscode.workspace.fs.writeFile(target, Buffer.from(content, "utf8"));
+      },
+    };
+  });
+}
+
+async function removeNewTarget(target: vscode.Uri): Promise<void> {
+  await vscode.workspace.fs.delete(target);
+}
+
 export async function savePendingKnowledgeDraft(uri?: vscode.Uri): Promise<void> {
   const draftUri = uri ?? vscode.window.activeTextEditor?.document.uri;
   const pending = draftUri ? resolvePendingDraft(draftUri) : undefined;
@@ -60,13 +97,29 @@ export async function savePendingKnowledgeDraft(uri?: vscode.Uri): Promise<void>
     return;
   }
 
-  const result = await persistDraft({
-    targetExists: () => targetExists(pending.target),
-    save: async () => await pending.document.save(),
-  });
+  const transactionUpdates = approvedUpdateOperations(pending);
+  const targetKey = key(pending.target);
+  commandSaves.add(targetKey);
+  let result: DraftSaveResult;
+  try {
+    const save = async (): Promise<boolean> => await pending.document.save();
+    result = transactionUpdates.length
+      ? await persistDraftTransaction({
+          targetExists: () => targetExists(pending.target),
+          save,
+          rollbackNew: () => removeNewTarget(pending.target),
+          updates: transactionUpdates,
+        })
+      : await persistDraft({
+          targetExists: () => targetExists(pending.target),
+          save,
+        });
+  } finally {
+    commandSaves.delete(targetKey);
+  }
   if (result.status === "conflict") {
     void vscode.window.showErrorMessage(
-      `保存先が既に存在するため登録しませんでした: ${pending.relativeTarget}`,
+      `保存先または承認済みの既存Markdownが変更されたため登録しませんでした: ${pending.relativeTarget}`,
     );
     return;
   }
@@ -82,4 +135,38 @@ export async function savePendingKnowledgeDraft(uri?: vscode.Uri): Promise<void>
     { preview: false },
   );
   void vscode.window.showInformationMessage(`ナレッジを登録しました: ${pending.relativeTarget}`);
+}
+
+export async function clearPendingKnowledgeDraft(
+  document: vscode.TextDocument,
+): Promise<void> {
+  const savedKey = key(document.uri);
+  if (commandSaves.has(savedKey)) return;
+  const matching = [...pendingDrafts.entries()]
+    .filter(([, pending]) => key(pending.target) === savedKey);
+  for (const [draftKey, pending] of matching) {
+    const updates = approvedUpdateOperations(pending);
+    if (updates.length) {
+      const result = await persistApprovedDocumentUpdates({
+        rollbackNew: () => removeNewTarget(pending.target),
+        updates,
+      });
+      if (result.status !== "saved") {
+        const detail = result.status === "conflict"
+          ? "承認後に既存Markdownが変更されました。"
+          : result.error instanceof Error
+            ? result.error.message
+            : "不明なエラー";
+        void vscode.window.showErrorMessage(
+          `承認済みの変更を反映できなかったため、新規Entryを取り消しました: ${detail}`,
+        );
+        continue;
+      }
+      void vscode.window.showInformationMessage(
+        `ナレッジと承認済みの関係を登録しました: ${pending.relativeTarget}`,
+      );
+    }
+    pendingDrafts.delete(draftKey);
+  }
+  pendingDrafts.delete(savedKey);
 }

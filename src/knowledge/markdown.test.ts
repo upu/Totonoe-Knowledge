@@ -34,6 +34,7 @@ test("renders generated sections and quotes the untrusted source", () => {
   assert.match(markdown, /# 結論\n\nsttyを使用する。/);
   assert.match(markdown, /related:\n  - "K-20260714-001"/);
   assert.match(markdown, /supersedes:\n  - "K-20260713-001"/);
+  assert.match(markdown, /conflicts: \[\]/);
   assert.match(markdown, /> # 元の見出し\n> 確認した入力/);
   assert.match(markdown, /## 参照\n\n- src\/terminal.ts\n- Issue #42/);
 });

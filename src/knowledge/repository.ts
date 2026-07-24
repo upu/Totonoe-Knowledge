@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { persistDraft } from "./draftSave";
+import { persistDraft, persistDraftTransaction } from "./draftSave";
+import type { ProposedDocumentUpdate } from "./documentUpdate";
 import { directoryFor, knowledgeTargetReference, renderKnowledge } from "./markdown";
 import type { KnowledgeDraft } from "./types";
 import { validateKnowledgeDocuments } from "../validation/knowledgeValidator";
@@ -42,6 +43,7 @@ export async function saveKnowledgeDraft(
   repositoryRoot: vscode.Uri,
   draft: KnowledgeDraft,
   markdown = renderKnowledge(draft),
+  updates: readonly ProposedDocumentUpdate[] = [],
 ): Promise<vscode.Uri> {
   const reference = knowledgeTargetReference(draft);
   const validationErrors = validateKnowledgeDocuments([{ path: reference, content: markdown }])
@@ -56,13 +58,36 @@ export async function saveKnowledgeDraft(
   await vscode.workspace.fs.createDirectory(
     vscode.Uri.joinPath(repositoryRoot, directoryFor(draft.type)),
   );
-  const result = await persistDraft({
-    targetExists: () => targetExists(target),
-    save: async () => {
-      await vscode.workspace.fs.writeFile(target, Buffer.from(markdown, "utf8"));
-      return true;
-    },
+  const save = async (): Promise<true> => {
+    await vscode.workspace.fs.writeFile(target, Buffer.from(markdown, "utf8"));
+    return true;
+  };
+  const transactionUpdates = updates.map((update) => {
+    const updateTarget = vscode.Uri.joinPath(repositoryRoot, ...update.path.split("/"));
+    return {
+      expectedContent: update.expectedContent,
+      proposedContent: update.proposedContent,
+      read: async () => Buffer.from(
+        await vscode.workspace.fs.readFile(updateTarget),
+      ).toString("utf8"),
+      write: async (content: string) => {
+        await vscode.workspace.fs.writeFile(updateTarget, Buffer.from(content, "utf8"));
+      },
+    };
   });
+  const result = transactionUpdates.length
+    ? await persistDraftTransaction({
+        targetExists: () => targetExists(target),
+        save,
+        rollbackNew: async () => {
+          await vscode.workspace.fs.delete(target);
+        },
+        updates: transactionUpdates,
+      })
+    : await persistDraft({
+        targetExists: () => targetExists(target),
+        save,
+      });
   if (result.status === "conflict") {
     throw new Error(`同じIDのナレッジファイルがすでに存在します: ${draft.id}`);
   }
