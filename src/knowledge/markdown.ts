@@ -63,10 +63,13 @@ applies_from: ${yamlString(draft.appliesFrom ?? "")}
 applies_to: ${yamlString(draft.appliesTo ?? "")}
 ${yamlList("keywords", draft.keywords)}
 created_at: ${draft.createdAt}
-updated_at: ${draft.createdAt}
+updated_at: ${draft.updatedAt ?? draft.createdAt}
 ${yamlList("related", draft.relatedKnowledgeIds ?? [])}
 ${yamlList("supersedes", draft.supersedesKnowledgeIds ?? [])}
 ${yamlList("conflicts", draft.conflictKnowledgeIds ?? [])}
+${yamlList("affects", draft.affectedCurrentViewIds ?? [])}
+${yamlList("consolidates", draft.consolidatedKnowledgeIds ?? [])}
+consolidated_at: ${yamlString(draft.consolidatedAt ?? "")}
 ---
 
 # 結論

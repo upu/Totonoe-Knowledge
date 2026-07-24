@@ -15,6 +15,7 @@
 - Show bounded, skippable relation candidates with reasons and evidence before saving a new Entry
 - Add a Codex SessionEnd inbox hook that distills completed sessions into unapproved prepared-knowledge candidates without auto-registering them
 - Apply accepted relation and Markdown changes only after editable diff review and final human approval
+- Generate and regenerate approval-gated Current Views with bidirectional source tracing and staleness validation
 
 ## 0.1.0 - 2026-07-15
 

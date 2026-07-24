@@ -18,9 +18,14 @@ export interface KnowledgeValidationIssue {
 interface ValidatedEntry {
   path: string;
   id?: string;
+  type?: string;
+  updatedAt?: string;
   related: string[];
   supersedes: string[];
   conflicts: string[];
+  affects: string[];
+  consolidates: string[];
+  consolidatedAt?: string;
   keyLines: Record<string, number>;
 }
 
@@ -55,7 +60,15 @@ export function validateKnowledgeDocuments(
     const parsed = parseFrontmatter(document.content);
     if (!parsed.hasFrontmatter) {
       issues.push(issue(document, 0, "error", "missing-frontmatter", "Markdown front matterがありません。"));
-      entries.push({ path: document.path, related: [], supersedes: [], conflicts: [], keyLines: {} });
+      entries.push({
+        path: document.path,
+        related: [],
+        supersedes: [],
+        conflicts: [],
+        affects: [],
+        consolidates: [],
+        keyLines: {},
+      });
       continue;
     }
 
@@ -95,17 +108,19 @@ export function validateKnowledgeDocuments(
         ));
       }
     }
-    if (
-      Object.hasOwn(parsed.values, "conflicts")
-      && frontmatterList(parsed, "conflicts") === undefined
-    ) {
-      issues.push(issue(
-        document,
-        parsed.keyLines.conflicts ?? 1,
-        "error",
-        "invalid-list",
-        "conflicts は文字列配列で指定してください。",
-      ));
+    for (const field of ["conflicts", "affects", "consolidates"]) {
+      if (
+        Object.hasOwn(parsed.values, field)
+        && frontmatterList(parsed, field) === undefined
+      ) {
+        issues.push(issue(
+          document,
+          parsed.keyLines[field] ?? 1,
+          "error",
+          "invalid-list",
+          `${field} は文字列配列で指定してください。`,
+        ));
+      }
     }
 
     const type = frontmatterString(parsed, "type");
@@ -179,12 +194,37 @@ export function validateKnowledgeDocuments(
     if (id && !/^K-\d{8}-[A-Za-z0-9-]+$/.test(id)) {
       issues.push(issue(document, parsed.keyLines.id, "warning", "nonstandard-id", `標準形式ではないIDです: ${id}`));
     }
+    const consolidates = frontmatterList(parsed, "consolidates") ?? [];
+    const consolidatedAt = frontmatterString(parsed, "consolidated_at")?.trim();
+    const isCurrentView = consolidates.length > 0 || Boolean(consolidatedAt);
+    if (
+      isCurrentView
+      && (
+        type !== "specification"
+        || !consolidates.length
+        || !consolidatedAt
+        || Number.isNaN(Date.parse(consolidatedAt))
+      )
+    ) {
+      issues.push(issue(
+        document,
+        parsed.keyLines.consolidated_at ?? parsed.keyLines.consolidates ?? 1,
+        "error",
+        "invalid-current-view",
+        "Current Viewにはtype: specification、1件以上のconsolidates、有効なconsolidated_atが必要です。",
+      ));
+    }
     const entry: ValidatedEntry = {
       path: document.path,
       id,
+      type,
+      updatedAt: frontmatterString(parsed, "updated_at")?.trim(),
       related: frontmatterList(parsed, "related") ?? [],
       supersedes: frontmatterList(parsed, "supersedes") ?? [],
       conflicts: frontmatterList(parsed, "conflicts") ?? [],
+      affects: frontmatterList(parsed, "affects") ?? [],
+      consolidates,
+      consolidatedAt,
       keyLines: parsed.keyLines,
     };
     entries.push(entry);
@@ -212,6 +252,8 @@ export function validateKnowledgeDocuments(
       ["related", entry.related],
       ["supersedes", entry.supersedes],
       ["conflicts", entry.conflicts],
+      ["affects", entry.affects],
+      ["consolidates", entry.consolidates],
     ] as const) {
       for (const reference of new Set(references)) {
         const line = referenceLine(document.content, reference, entry.keyLines[field] ?? 1);
@@ -221,7 +263,9 @@ export function validateKnowledgeDocuments(
           issues.push(issue(
             document,
             line,
-            field === "supersedes" ? "error" : "warning",
+            field === "supersedes" || field === "affects" || field === "consolidates"
+              ? "error"
+              : "warning",
             "unknown-reference",
             `${field} の参照先 ${reference} が見つかりません。`,
           ));
@@ -253,6 +297,49 @@ export function validateKnowledgeDocuments(
       "supersedes-cycle",
       `supersedes関係が循環しています: ${entry.id}`,
     ));
+  }
+
+  for (const currentView of uniqueEntries.values()) {
+    if (!currentView.id || !currentView.consolidates.length || !currentView.consolidatedAt) continue;
+    const currentDocument = documents.find((candidate) => candidate.path === currentView.path)!;
+    const consolidatedTime = Date.parse(currentView.consolidatedAt);
+    if (Number.isNaN(consolidatedTime)) continue;
+    for (const sourceId of currentView.consolidates) {
+      const source = uniqueEntries.get(sourceId);
+      if (source?.updatedAt && Date.parse(source.updatedAt) > consolidatedTime) {
+        issues.push(issue(
+          currentDocument,
+          currentView.keyLines.consolidated_at ?? 1,
+          "warning",
+          "stale-current-view",
+          `根拠Entry ${sourceId} がconsolidated_atより後に更新されています。`,
+        ));
+      }
+      const replacement = [...uniqueEntries.values()].find((entry) =>
+        entry.id
+        && !currentView.consolidates.includes(entry.id)
+        && entry.supersedes.includes(sourceId)
+      );
+      if (replacement?.id) {
+        issues.push(issue(
+          currentDocument,
+          currentView.keyLines.consolidates ?? 1,
+          "warning",
+          "stale-current-view",
+          `根拠Entry ${sourceId} が未包含Entry ${replacement.id} に置き換えられています。`,
+        ));
+      }
+    }
+    for (const pending of uniqueEntries.values()) {
+      if (!pending.id || !pending.affects.includes(currentView.id)) continue;
+      issues.push(issue(
+        currentDocument,
+        currentView.keyLines.consolidates ?? 1,
+        "warning",
+        "stale-current-view",
+        `Entry ${pending.id} のaffectsがこのCurrent Viewへの未反映変更を示しています。`,
+      ));
+    }
   }
 
   return issues.sort((a, b) =>

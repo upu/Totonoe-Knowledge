@@ -137,3 +137,51 @@ test("rejects malformed, incompatible, and reversed version ranges", () => {
   assert.ok(codes.includes("incompatible-version-range"));
   assert.ok(codes.includes("reversed-version-range"));
 });
+
+test("validates Current View tracking and reports every staleness cause", () => {
+  const source = entry("K-20260715-101").replace(
+    "updated_at: 2026-07-15T00:00:00.000Z",
+    "updated_at: 2026-07-25T00:00:00.000Z",
+  );
+  const replacement = entry("K-20260715-102").replace(
+    "supersedes: []",
+    "supersedes:\n  - K-20260715-101",
+  );
+  const pending = entry("K-20260715-103").replace(
+    "supersedes: []",
+    "supersedes: []\naffects:\n  - K-20260715-200",
+  );
+  const current = entry("K-20260715-200")
+    .replace("type: investigation", "type: specification")
+    .replace(
+      "supersedes: []",
+      "supersedes: []\nconsolidates:\n  - K-20260715-101\nconsolidated_at: 2026-07-20T00:00:00.000Z",
+    );
+
+  const issues = validateKnowledgeDocuments([
+    { path: "source.md", content: source },
+    { path: "replacement.md", content: replacement },
+    { path: "pending.md", content: pending },
+    { path: "current.md", content: current },
+  ]);
+  const stale = issues.filter((value) => value.code === "stale-current-view");
+
+  assert.equal(stale.length, 3);
+  assert.ok(stale.some((value) => value.message.includes("更新")));
+  assert.ok(stale.some((value) => value.message.includes("置き換え")));
+  assert.ok(stale.some((value) => value.message.includes("affects")));
+});
+
+test("rejects invalid Current View front matter, unknown IDs, and duplicate references", () => {
+  const current = entry("K-20260715-200")
+    .replace(
+      "supersedes: []",
+      "supersedes: []\nconsolidates:\n  - K-20260715-999\n  - K-20260715-999\nconsolidated_at: not-a-date",
+    );
+  const issues = validateKnowledgeDocuments([{ path: "current.md", content: current }]);
+  const codes = issues.map((value) => value.code);
+
+  assert.ok(codes.includes("invalid-current-view"));
+  assert.ok(codes.includes("unknown-reference"));
+  assert.ok(codes.includes("duplicate-reference"));
+});

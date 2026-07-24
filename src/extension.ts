@@ -1,5 +1,10 @@
 import * as vscode from "vscode";
 import { rebuildSearchIndex } from "./commands/rebuildSearchIndex";
+import {
+  generateCurrentView,
+  markCurrentViewAffected,
+  showCurrentViewLinks,
+} from "./commands/currentView";
 import { registerKnowledge } from "./commands/registerKnowledge";
 import { searchKnowledge } from "./commands/searchKnowledge";
 import {
@@ -46,6 +51,15 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("totonoeKnowledge.search", () => searchKnowledge(repositoryLocator)),
     vscode.commands.registerCommand("totonoeKnowledge.searchForVersion", () =>
       searchKnowledge(repositoryLocator, true),
+    ),
+    vscode.commands.registerCommand("totonoeKnowledge.generateCurrentView", () =>
+      generateCurrentView(context, repositoryLocator),
+    ),
+    vscode.commands.registerCommand("totonoeKnowledge.showCurrentViewLinks", () =>
+      showCurrentViewLinks(repositoryLocator),
+    ),
+    vscode.commands.registerCommand("totonoeKnowledge.markCurrentViewAffected", () =>
+      markCurrentViewAffected(repositoryLocator),
     ),
     vscode.commands.registerCommand("totonoeKnowledge.saveDraft", () => savePendingKnowledgeDraft()),
     vscode.commands.registerCommand("totonoeKnowledge.rebuildSearchIndex", () =>
