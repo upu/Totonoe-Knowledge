@@ -3,52 +3,34 @@ import * as vscode from "vscode";
 import { findKnowledgeMarkdownFiles } from "../knowledge/knowledgeFiles";
 import {
   SqliteKnowledgeIndex,
-  createFtsQuery,
-  type KnowledgeIndexSource,
   type KnowledgeIndexStorage,
   type KnowledgeIndexSyncResult,
 } from "./sqliteIndex";
 import {
-  searchHybridKnowledgeDocuments,
-  searchKnowledgeDocuments,
-  parseKnowledgeDocument,
-  type KnowledgeDocument,
-  type KnowledgeSearchResult,
-  type SemanticDocumentScore,
-} from "./searchEngine";
-import {
   EmbeddingIndex,
-  type EmbeddingIndexSource,
   type EmbeddingIndexStorage,
-  type EmbeddingIndexSyncResult,
 } from "./embeddingIndex";
 import {
-  cosineSimilarity,
   embeddingProviderKey,
-  normalizeEmbedding,
   type EmbeddingProvider,
 } from "./embeddingProvider";
 import { OllamaEmbeddingProvider } from "./ollamaEmbeddingProvider";
+import {
+  embeddingTextForDocument,
+  searchKnowledgeSources,
+  type KnowledgeSearchResponse,
+  type KnowledgeSearchSource,
+} from "./searchService";
 
 const indexDirectory = ".totonoe";
 const indexFile = "index.sqlite";
 const vectorDirectory = "vectors";
 const vectorIndexFile = "index.json";
-const semanticCandidateLimit = 50;
-
-interface WorkspaceKnowledgeSource extends KnowledgeIndexSource, EmbeddingIndexSource {
+interface WorkspaceKnowledgeSource extends KnowledgeSearchSource {
   uri: vscode.Uri;
 }
 
-export interface WorkspaceSearchResult {
-  results: KnowledgeSearchResult[];
-  backend: "hybrid" | "sqlite" | "scan";
-  sync?: KnowledgeIndexSyncResult;
-  indexError?: Error;
-  embeddingSync?: Omit<EmbeddingIndexSyncResult, "vectors">;
-  embeddingError?: Error;
-  embeddingProvider?: string;
-}
+export type WorkspaceSearchResult = KnowledgeSearchResponse;
 
 class VscodeIndexStorage implements KnowledgeIndexStorage {
   private readonly directory: vscode.Uri;
@@ -170,31 +152,12 @@ async function collectSources(
       path: relativePath(repositoryRoot, uri),
       fingerprint: `${stat.mtime}:${stat.size}`,
       readContent,
-      readEmbeddingText: async () => {
-        const parsed = parseKnowledgeDocument({
-          path: relativePath(repositoryRoot, uri),
-          content: await readContent(),
-        });
-        return [
-          parsed.title,
-          parsed.summary,
-          parsed.keywords.join(" "),
-          parsed.type,
-          parsed.status,
-          Array.from(parsed.body).slice(0, 8_000).join(""),
-        ].filter(Boolean).join("\n");
-      },
+      readEmbeddingText: async () => embeddingTextForDocument({
+        path: relativePath(repositoryRoot, uri),
+        content: await readContent(),
+      }),
     };
   }));
-}
-
-async function readDocuments(
-  sources: WorkspaceKnowledgeSource[],
-): Promise<KnowledgeDocument[]> {
-  return Promise.all(sources.map(async (source) => ({
-    path: source.path,
-    content: await source.readContent(),
-  })));
 }
 
 interface EmbeddingConfiguration {
@@ -217,33 +180,6 @@ export function configuredEmbeddingProvider(): EmbeddingConfiguration {
   };
 }
 
-async function lexicalSearch(
-  sources: WorkspaceKnowledgeSource[],
-  indexRoot: vscode.Uri,
-  query: string,
-  version?: string,
-): Promise<WorkspaceSearchResult> {
-  if (version || !createFtsQuery(query)) {
-    return {
-      results: searchKnowledgeDocuments(await readDocuments(sources), query, version ? { version } : {}),
-      backend: "scan",
-    };
-  }
-  try {
-    const index = indexFor(indexRoot);
-    const sync = await index.sync(sources);
-    const candidates = new Set(await index.candidatePaths(query));
-    const documents = await readDocuments(sources.filter((source) => candidates.has(source.path)));
-    return { results: searchKnowledgeDocuments(documents, query), backend: "sqlite", sync };
-  } catch (error) {
-    return {
-      results: searchKnowledgeDocuments(await readDocuments(sources), query),
-      backend: "scan",
-      indexError: error instanceof Error ? error : new Error(String(error)),
-    };
-  }
-}
-
 export async function searchWorkspaceKnowledge(
   repositoryRoot: vscode.Uri,
   indexRoot: vscode.Uri,
@@ -255,68 +191,22 @@ export async function searchWorkspaceKnowledge(
   try {
     embedding = configuredEmbeddingProvider();
   } catch (error) {
-    const fallback = await lexicalSearch(sources, indexRoot, query, version);
+    const fallback = await searchKnowledgeSources(sources, query, {
+      lexicalIndex: indexFor(indexRoot),
+    }, version);
     return {
       ...fallback,
       embeddingError: error instanceof Error ? error : new Error(String(error)),
     };
   }
-  if (!embedding.provider) return await lexicalSearch(sources, indexRoot, query, version);
-
-  const providerKey = embeddingProviderKey(embedding.provider);
-  try {
-    const embeddingSync = await embeddingIndexFor(indexRoot, embedding.provider).sync(sources);
-    const rawQueryVector = (await embedding.provider.embed([query]))[0];
-    if (!rawQueryVector) throw new Error("Embedding provider did not return a query vector.");
-    const queryVector = normalizeEmbedding(rawQueryVector);
-    const similarities = [...embeddingSync.vectors.entries()].map(([path, vector]) => ({
-      path,
-      similarity: cosineSimilarity(queryVector, vector),
-    })).sort((left, right) => right.similarity - left.similarity);
-    const semanticCandidates = similarities
-      .filter(({ similarity }) => similarity >= embedding.minimumSimilarity)
-      .slice(0, semanticCandidateLimit);
-    const candidatePaths = new Set(semanticCandidates.map(({ path }) => path));
-    let sync: KnowledgeIndexSyncResult | undefined;
-    let indexError: Error | undefined;
-
-    if (!version && createFtsQuery(query)) {
-      try {
-        const index = indexFor(indexRoot);
-        sync = await index.sync(sources);
-        for (const path of await index.candidatePaths(query)) candidatePaths.add(path);
-      } catch (error) {
-        indexError = error instanceof Error ? error : new Error(String(error));
-        for (const source of sources) candidatePaths.add(source.path);
-      }
-    }
-    if (version) for (const source of sources) candidatePaths.add(source.path);
-
-    const documents = await readDocuments(sources.filter((source) => candidatePaths.has(source.path)));
-    const semanticScores = new Map<string, SemanticDocumentScore>(similarities.map(({ path, similarity }) => [
-      path,
-      { similarity, provider: providerKey },
-    ]));
-    const { vectors: _vectors, ...embeddingSyncSummary } = embeddingSync;
-    return {
-      results: searchHybridKnowledgeDocuments(documents, query, semanticScores, {
-        version,
-        minimumSemanticSimilarity: embedding.minimumSimilarity,
-      }),
-      backend: "hybrid",
-      sync,
-      indexError,
-      embeddingSync: embeddingSyncSummary,
-      embeddingProvider: providerKey,
-    };
-  } catch (error) {
-    const fallback = await lexicalSearch(sources, indexRoot, query, version);
-    return {
-      ...fallback,
-      embeddingProvider: providerKey,
-      embeddingError: error instanceof Error ? error : new Error(String(error)),
-    };
-  }
+  return await searchKnowledgeSources(sources, query, {
+    lexicalIndex: indexFor(indexRoot),
+    semantic: embedding.provider ? {
+      provider: embedding.provider,
+      index: embeddingIndexFor(indexRoot, embedding.provider),
+      minimumSimilarity: embedding.minimumSimilarity,
+    } : undefined,
+  }, version);
 }
 
 export async function rebuildWorkspaceKnowledgeIndex(
