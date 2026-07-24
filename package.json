@@ -317,7 +317,7 @@
     "compile:integration": "esbuild ./integration/runTest.ts ./integration/suite/index.ts --bundle --platform=node --format=cjs --external:vscode --external:@vscode/test-electron --outbase=./integration --outdir=./.integration-test --sourcemap && npm run copy:sqlite-wasm:integration",
     "compile:all": "npm run compile && npm run compile:integration",
     "watch": "npm run copy:sqlite-wasm && esbuild ./src/extension.ts --bundle --platform=node --external:vscode --outfile=./dist/extension.js --sourcemap --watch",
-    "test": "tsx --test src/**/*.test.ts",
+    "test": "tsx --test src/**/*.test.ts && node --test examples/codex-inbox-hook/totonoe-codex-inbox.test.mjs",
     "test:mcp": "tsx integration/mcpStdioTest.ts",
     "test:integration": "npm run compile:all && node ./.integration-test/runTest.js",
     "package": "npm run check && npm test && npm run compile && npm run test:mcp"

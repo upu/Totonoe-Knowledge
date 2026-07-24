@@ -1,0 +1,18 @@
+{
+  "description": "Queue Codex sessions for Totonoe Knowledge inbox distillation.",
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/examples/codex-inbox-hook/totonoe-codex-inbox.mjs\"",
+            "commandWindows": "powershell.exe -NoProfile -Command \"$root = git rev-parse --show-toplevel; node (Join-Path $root 'examples/codex-inbox-hook/totonoe-codex-inbox.mjs')\"",
+            "timeout": 3,
+            "statusMessage": "Queuing Totonoe Knowledge candidate"
+          }
+        ]
+      }
+    ]
+  }
+}

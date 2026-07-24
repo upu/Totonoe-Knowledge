@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "decision": {
+      "type": "string",
+      "enum": ["write", "skip"]
+    },
+    "reason": {
+      "type": "string"
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "investigation",
+              "troubleshooting",
+              "specification",
+              "change",
+              "procedure",
+              "decision"
+            ]
+          },
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10
+          },
+          "conclusion": {
+            "type": "string"
+          },
+          "background": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "procedure": {
+            "type": "string"
+          },
+          "cautions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "unresolved": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "summary",
+          "type",
+          "keywords",
+          "conclusion",
+          "background",
+          "verified",
+          "procedure",
+          "cautions",
+          "unresolved"
+        ]
+      }
+    }
+  },
+  "required": ["decision", "reason", "candidates"]
+}
