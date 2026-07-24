@@ -1,8 +1,16 @@
 import * as vscode from "vscode";
 import { requiresMetadataInput, type GenerationOrigin } from "../ai/generationOrigin";
 import { orderModelsByPreviousSelection } from "../ai/modelSelection";
+import { VsCodeRelationCandidateClassifier } from "../ai/relationCandidateClassifier";
+import { buildRelationCandidatePrompt } from "../ai/relationCandidatePrompt";
 import { TemplateOnlyGenerator } from "../ai/templateOnlyGenerator";
 import { VsCodeLanguageModelGenerator } from "../ai/vsCodeLanguageModelGenerator";
+import {
+  classifyRelationCandidates,
+  relationCandidateQuery,
+  selectRelationCandidates,
+  type RelationSuggestion,
+} from "../curation/relationCandidates";
 import { renderKnowledge } from "../knowledge/markdown";
 import { createKnowledgeId } from "../knowledge/id";
 import { prepareKnowledgeTarget, saveKnowledgeDraft } from "../knowledge/repository";
@@ -22,6 +30,7 @@ import {
   scanForSecrets,
   summarizeSecretFindings,
 } from "../security/secretScanner";
+import { searchWorkspaceKnowledge } from "../search/workspaceSearch";
 import {
   registerPendingKnowledgeDraft,
   savePendingKnowledgeDraft,
@@ -98,10 +107,11 @@ async function confirmExternalSend(source: KnowledgeSource): Promise<"send" | "t
 
 async function chooseLanguageModel(
   context: vscode.ExtensionContext,
+  unavailableMessage = "利用できるAIモデルがありません。入力用テンプレートへ切り替えます。",
 ): Promise<vscode.LanguageModelChat | null | undefined> {
   const models = await vscode.lm.selectChatModels();
   if (!models.length) {
-    void vscode.window.showWarningMessage("利用できるAIモデルがありません。入力用テンプレートへ切り替えます。");
+    void vscode.window.showWarningMessage(unavailableMessage);
     return null;
   }
   const previousModelId = context.globalState.get<string>(previousModelStorageKey);
@@ -208,6 +218,134 @@ async function editMetadata(generated: GeneratedKnowledge): Promise<GeneratedKno
   };
 }
 
+async function confirmRelationCandidateSend(
+  draft: KnowledgeDraft,
+  candidates: Parameters<typeof buildRelationCandidatePrompt>[1],
+): Promise<boolean> {
+  const enabled = vscode.workspace
+    .getConfiguration("totonoeKnowledge")
+    .get<boolean>("secretScanning.enabled", true);
+  if (!enabled) return true;
+  const material = buildRelationCandidatePrompt(draft, candidates);
+  const findings = scanForSecrets(material);
+  if (!findings.length) return true;
+
+  const choice = await vscode.window.showWarningMessage(
+    `関係候補の比較内容に秘密情報らしい文字列があります（${summarizeSecretFindings(findings)}）。検出箇所: ${describeSecretFindingLocations(material, findings)}。選択したAIモデルへ送信しますか？`,
+    { modal: true },
+    "候補確認を省略",
+    "理解して送信する",
+  );
+  return choice === "理解して送信する";
+}
+
+interface RelationSuggestionItem extends vscode.QuickPickItem {
+  suggestion?: RelationSuggestion;
+}
+
+async function showRelationSuggestions(
+  repositoryRoot: vscode.Uri,
+  suggestions: readonly RelationSuggestion[],
+): Promise<void> {
+  const done: RelationSuggestionItem = {
+    label: "$(check) 候補確認を終えて登録へ進む",
+    alwaysShow: true,
+  };
+  const items: RelationSuggestionItem[] = suggestions.map((suggestion) => ({
+    label: `${suggestion.relation} · ${suggestion.evidence.title}`,
+    description: suggestion.evidence.id,
+    detail: `${suggestion.reason} · ${suggestion.isCurrentView ? "Current View · " : ""}${suggestion.evidence.path}`,
+    suggestion,
+  }));
+
+  while (true) {
+    const selected = await vscode.window.showQuickPick([done, ...items], {
+      title: "既存Knowledge Entryとの関係候補",
+      placeHolder: "候補を開いて根拠を確認できます。ここでは関係を保存しません。",
+      matchOnDescription: true,
+      matchOnDetail: true,
+      ignoreFocusOut: true,
+    });
+    if (!selected?.suggestion) return;
+    const evidence = vscode.Uri.joinPath(
+      repositoryRoot,
+      ...selected.suggestion.evidence.path.split("/"),
+    );
+    try {
+      await vscode.window.showTextDocument(
+        await vscode.workspace.openTextDocument(evidence),
+        { preview: true },
+      );
+    } catch (error) {
+      void vscode.window.showWarningMessage(
+        `根拠Entryを開けませんでした: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+}
+
+async function reviewRelationCandidates(
+  draft: KnowledgeDraft,
+  repositoryRoot: vscode.Uri,
+  indexRoot: vscode.Uri,
+  context: vscode.ExtensionContext,
+): Promise<void> {
+  const action = await vscode.window.showInformationMessage(
+    "保存前に、既存Knowledge Entryとの関係候補を理由・根拠付きで確認しますか？",
+    "候補を確認",
+    "省略して続ける",
+  );
+  if (action !== "候補を確認") return;
+
+  const search = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Window, title: "関係候補を検索中" },
+    () => searchWorkspaceKnowledge(
+      repositoryRoot,
+      indexRoot,
+      relationCandidateQuery(draft),
+    ),
+  );
+  const candidates = selectRelationCandidates(draft, search.results);
+  if (!candidates.length) {
+    void vscode.window.showInformationMessage(
+      "比較する既存Entryが見つからなかったため、関係を設定せず登録を続けます。",
+    );
+    return;
+  }
+
+  const model = await chooseLanguageModel(
+    context,
+    "利用できるAIモデルがないため、関係候補を作らず登録を続けます。",
+  );
+  if (!model || !(await confirmRelationCandidateSend(draft, candidates))) return;
+
+  const outcome = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `${model.name}で関係候補を確認中`,
+      cancellable: true,
+    },
+    async (_progress, token) => classifyRelationCandidates(
+      draft,
+      candidates,
+      new VsCodeRelationCandidateClassifier(model, token),
+    ),
+  );
+  if (outcome.status === "unavailable") {
+    void vscode.window.showWarningMessage(
+      `関係候補を作れなかったため、関係を設定せず登録を続けます: ${outcome.reason}`,
+    );
+    return;
+  }
+  if (outcome.status === "none") {
+    void vscode.window.showInformationMessage(
+      "根拠のある関係候補はありませんでした。関係を設定せず登録を続けます。",
+    );
+    return;
+  }
+  await showRelationSuggestions(repositoryRoot, outcome.suggestions);
+}
+
 async function confirmLocalSave(markdown: string): Promise<boolean> {
   const enabled = vscode.workspace
     .getConfiguration("totonoeKnowledge")
@@ -283,6 +421,18 @@ export async function registerKnowledge(
     createdAt: now.toISOString(),
   };
 
+  try {
+    await reviewRelationCandidates(
+      draft,
+      location.repositoryRoot,
+      location.indexRoot,
+      context,
+    );
+  } catch (error) {
+    void vscode.window.showWarningMessage(
+      `関係候補を確認できなかったため、従来の登録を続けます: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
   const markdown = renderKnowledge(draft);
   const target = await prepareKnowledgeTarget(location.repositoryRoot, draft);
   const relativeTarget = repositoryRelativePath(location, target);
