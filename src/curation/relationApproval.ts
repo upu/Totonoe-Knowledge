@@ -62,7 +62,23 @@ export function updateFrontmatterList(
   if (Object.hasOwn(parsed.values, key) && current === undefined) {
     throw new Error(`${key}が文字列配列ではないため関係を更新できません。`);
   }
-  const values = [...new Set([...(current ?? []), ...additions.map((value) => value.trim()).filter(Boolean)])];
+  return setFrontmatterList(content, key, [
+    ...(current ?? []),
+    ...additions,
+  ]);
+}
+
+export function setFrontmatterList(
+  content: string,
+  key: string,
+  requestedValues: readonly string[],
+): string {
+  const parsed = parseFrontmatter(content);
+  if (!parsed.hasFrontmatter) throw new Error("front matterがないため関係を更新できません。");
+  if (Object.hasOwn(parsed.values, key) && frontmatterList(parsed, key) === undefined) {
+    throw new Error(`${key}が文字列配列ではないため関係を更新できません。`);
+  }
+  const values = [...new Set(requestedValues.map((value) => value.trim()).filter(Boolean))];
   const replacement = values.length
     ? [`${key}:`, ...values.map((value) => `  - ${JSON.stringify(value)}`)]
     : [`${key}: []`];

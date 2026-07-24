@@ -57,6 +57,9 @@ test("contributes explicit save and search language model tools", async () => {
     "totonoeKnowledge.useWorkspaceRepository",
     "totonoeKnowledge.searchForVersion",
     "totonoeKnowledge.saveDraft",
+    "totonoeKnowledge.generateCurrentView",
+    "totonoeKnowledge.showCurrentViewLinks",
+    "totonoeKnowledge.markCurrentViewAffected",
   ]) {
     assert.ok(commands.has(command), `command should be contributed: ${command}`);
   }

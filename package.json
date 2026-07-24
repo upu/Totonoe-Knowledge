@@ -82,6 +82,18 @@
         "title": "Totonoe Knowledge: Search for Version"
       },
       {
+        "command": "totonoeKnowledge.generateCurrentView",
+        "title": "Totonoe Knowledge: Generate or Update Current View"
+      },
+      {
+        "command": "totonoeKnowledge.showCurrentViewLinks",
+        "title": "Totonoe Knowledge: Show Current View Links"
+      },
+      {
+        "command": "totonoeKnowledge.markCurrentViewAffected",
+        "title": "Totonoe Knowledge: Mark Entry as Pending for Current View"
+      },
+      {
         "command": "totonoeKnowledge.validateRepository",
         "title": "Totonoe Knowledge: Validate Repository"
       },

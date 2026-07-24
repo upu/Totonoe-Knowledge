@@ -35,6 +35,26 @@ export async function confirmKnowledgeApprovalPlan(
           content: after,
         }),
       };
+  return await confirmDocumentUpdates(updates, {
+    newEntryDocuments,
+    summary: `新規Entryの関係${before === after ? "なし" : "あり"}、既存Markdown ${updates.length}件`,
+    approvalLabel: "承認してプレビューへ",
+  });
+}
+
+interface ConfirmDocumentUpdatesOptions {
+  newEntryDocuments?: {
+    before: vscode.TextDocument;
+    after: vscode.TextDocument;
+  };
+  summary?: string;
+  approvalLabel?: string;
+}
+
+export async function confirmDocumentUpdates(
+  updates: readonly ProposedDocumentUpdate[],
+  options: ConfirmDocumentUpdatesOptions = {},
+): Promise<ProposedDocumentUpdate[] | undefined> {
   const editableUpdates = await Promise.all(updates.map(async (update) => ({
     update,
     before: await vscode.workspace.openTextDocument({
@@ -48,23 +68,23 @@ export async function confirmKnowledgeApprovalPlan(
   })));
   while (true) {
     const action = await vscode.window.showInformationMessage(
-      `承認する変更案: 新規Entryの関係${before === after ? "なし" : "あり"}、既存Markdown ${updates.length}件。正本への書き込みは登録操作まで行いません。`,
+      `承認する変更案: ${options.summary ?? `既存Markdown ${updates.length}件`}。承認前は正本へ書き込みません。`,
       { modal: true },
       "差分を確認",
-      "承認してプレビューへ",
+      options.approvalLabel ?? "承認して反映",
       "キャンセル",
     );
-    if (action === "承認してプレビューへ") {
+    if (action === (options.approvalLabel ?? "承認して反映")) {
       return editableUpdates.map(({ update, after: edited }) => ({
         ...update,
         proposedContent: edited.getText(),
       }));
     }
     if (action !== "差分を確認") return undefined;
-    if (newEntryDocuments) {
+    if (options.newEntryDocuments) {
       await showMarkdownDiff(
-        newEntryDocuments.before,
-        newEntryDocuments.after,
+        options.newEntryDocuments.before,
+        options.newEntryDocuments.after,
         "新規Entryのfront matter変更案",
       );
     }
