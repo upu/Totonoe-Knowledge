@@ -51,12 +51,15 @@ test("an exact error code remains ahead of a semantic distractor", () => {
 
 test("metadata and semantic contributions are visible in score reasons", () => {
   const target = document("decision.md", "Storage choice", "Keep the source in Markdown", ["architecture"]);
-  const result = rankHybridKnowledgeDocuments([target], "architecture", new Map([
+  const distractor = document("logging.md", "Application logging", "Collect diagnostic output");
+  const result = rankHybridKnowledgeDocuments([target, distractor], "architecture", new Map([
     [target.path, { similarity: 0.75, provider: "fake:model" }],
+    [distractor.path, { similarity: 0.25, provider: "fake:model" }],
   ]))[0];
   assert.ok(result.scoreBreakdown.metadata > 0);
   assert.ok(result.scoreBreakdown.semantic > 0);
   assert.ok(result.scoreBreakdown.reasons.length >= 3);
+  assert.ok(result.scoreBreakdown.reasons.some((reason) => reason.includes("分布confidence=")));
 });
 
 test("an explicitly configured absolute floor still filters weaker semantic evidence", () => {
@@ -65,4 +68,24 @@ test("an explicitly configured absolute floor still filters weaker semantic evid
     [target.path, { similarity: 0.3839, provider: "fake:model" }],
   ]), { minimumSemanticSimilarity: 0.45 });
   assert.deepEqual(results, []);
+});
+
+test("a narrow leading margin does not receive the full semantic weight", () => {
+  const documents = [
+    document("first.md", "First candidate", "Unrelated candidate one"),
+    document("second.md", "Second candidate", "Unrelated candidate two"),
+    document("third.md", "Third candidate", "Unrelated candidate three"),
+    document("fourth.md", "Fourth candidate", "Unrelated candidate four"),
+  ];
+  const results = rankHybridKnowledgeDocuments(documents, "承認済みの提案だけを確定する", new Map([
+    [documents[0].path, { similarity: 0.3215, provider: "fake:model" }],
+    [documents[1].path, { similarity: 0.3175, provider: "fake:model" }],
+    [documents[2].path, { similarity: 0.2400, provider: "fake:model" }],
+    [documents[3].path, { similarity: 0.1565, provider: "fake:model" }],
+  ]));
+  assert.ok(results[0].scoreBreakdown.semantic > 0);
+  assert.ok(results[0].scoreBreakdown.semantic < 5);
+  assert.ok(results[0].scoreBreakdown.reasons.some((reason) =>
+    reason.includes("上位margin=0.0040/範囲=0.1650"),
+  ));
 });

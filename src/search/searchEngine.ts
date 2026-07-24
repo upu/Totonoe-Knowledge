@@ -228,6 +228,15 @@ export function rankHybridKnowledgeDocuments(
   const highestSimilarity = eligibleSimilarities.length ? Math.max(...eligibleSimilarities) : 0;
   const lowestSimilarity = eligibleSimilarities.length ? Math.min(...eligibleSimilarities) : 0;
   const similarityRange = highestSimilarity - lowestSimilarity;
+  const descendingSimilarities = [...eligibleSimilarities].sort((left, right) => right - left);
+  const leadingMargin = descendingSimilarities.length > 1
+    ? descendingSimilarities[0] - descendingSimilarities[1]
+    : similarityRange;
+  const distributionConfidence = descendingSimilarities.length === 1
+    ? 1
+    : similarityRange > Number.EPSILON
+      ? leadingMargin / similarityRange
+      : 0;
   const relativeSemanticScores = new Map(eligibleSemanticScores.map(({ path, similarity }) => [
     path,
     similarityRange > Number.EPSILON
@@ -241,12 +250,12 @@ export function rankHybridKnowledgeDocuments(
     const semantic = semanticScores.get(document.path);
     const similarity = semantic?.similarity;
     const relativeSemanticScore = relativeSemanticScores.get(document.path);
-    const hasSemanticEvidence = relativeSemanticScore !== undefined && relativeSemanticScore > 0;
-    if (!lexical.hasEvidence && !hasSemanticEvidence) continue;
 
     const fullTextComponent = Math.min(lexical.fullText / 40, 1) * 45;
     const metadataComponent = Math.min(lexical.metadata / 20, 1) * 10;
-    const semanticComponent = (relativeSemanticScore ?? 0) * 45;
+    const semanticComponent = (relativeSemanticScore ?? 0) * distributionConfidence * 45;
+    const hasSemanticEvidence = semanticComponent > 0;
+    if (!lexical.hasEvidence && !hasSemanticEvidence) continue;
     const exactBonus = lexical.hasExactTerm ? 20 : 0;
     const score = fullTextComponent + metadataComponent + semanticComponent + exactBonus;
     const reasons = [
@@ -257,7 +266,12 @@ export function rankHybridKnowledgeDocuments(
       const relativeReason = relativeSemanticScore === undefined
         ? "下限未満"
         : `相対=${relativeSemanticScore.toFixed(4)}`;
-      reasons.push(`意味=${similarity.toFixed(4)}(${relativeReason})→${semanticComponent.toFixed(2)}`);
+      reasons.push(
+        `意味=${similarity.toFixed(4)}(${relativeReason},`
+        + `分布confidence=${distributionConfidence.toFixed(4)},`
+        + `上位margin=${leadingMargin.toFixed(4)}/範囲=${similarityRange.toFixed(4)})`
+        + `→${semanticComponent.toFixed(2)}`,
+      );
     }
     if (exactBonus) reasons.push(`完全一致bonus=${exactBonus.toFixed(2)}`);
 
